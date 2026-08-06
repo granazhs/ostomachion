@@ -12,13 +12,16 @@
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-    <div id="i18nbox">
-        <button onclick="translate('en')"><img src="assets/flag_en.png" alt="en"></button>
-        <button onclick="translate('de')"><img src="assets/flag_de.png" alt="de"></button>
-        <button onclick="translate('gr')"><img src="assets/flag_gr.png" alt="gr"></button>
-        <button onclick="translate('it')"><img src="assets/flag_it.png" alt="it"></button>
-        <button onclick="translate('es')"><img src="assets/flag_es.png" alt="es"></button>
-        <button onclick="translate('fr')"><img src="assets/flag_fr.png" alt="fr"></button>
+    <div id="i18nbox" onclick="i18n_showsel()" onmouseover="i18n_showsel()" onmouseout="i18n_hidesel()">
+        <div id="i18ncur"><img src="assets/flag_en.png" id="i18nflag" title="Select language"></div>
+        <div id="i18nsel" style="display: none">
+            <button onclick="window.translate('en')"><img src="assets/flag_en.png" alt="en"></button>
+            <button onclick="window.translate('gr')"><img src="assets/flag_gr.png" alt="gr"></button>
+            <button onclick="window.translate('de')"><img src="assets/flag_de.png" alt="de"></button>
+            <button onclick="window.translate('fr')"><img src="assets/flag_fr.png" alt="fr"></button>
+            <button onclick="window.translate('it')"><img src="assets/flag_it.png" alt="it"></button>
+            <button onclick="window.translate('es')"><img src="assets/flag_es.png" alt="es"></button>
+        </div>
     </div>
     <canvas id="canvas" width="1280" height="900"></canvas>
     <div id="controls">

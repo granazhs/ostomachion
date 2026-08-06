@@ -93,12 +93,22 @@ function translate(lang) {
     $("[data-i18nkey]").map(function() {
         this.innerHTML = map[this.getAttribute("data-i18nkey")];
     });
+    $("#i18nflag").attr("src", "assets/flag_" + lang + ".png");
     try {
         window.localStorage.setItem('lang', lang);
     } catch (err) {
     }
     if (typeof update_status === "function")
         update_status();
+    i18n_hidesel();
+}
+
+function i18n_showsel() {
+    $("#i18nsel").show();
+}
+
+function i18n_hidesel() {
+    $("#i18nsel").hide();
 }
 
 function i18n_load() {

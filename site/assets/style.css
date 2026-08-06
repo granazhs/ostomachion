@@ -31,15 +31,44 @@ html, body {
 #i18nbox {
     position: absolute;
     left: 1300px;
-    top: 0;
+    top: 8px;
     width: 260px;
+    z-index: 10;
+}
+
+#i18ncur {
     text-align: right;
+    cursor: pointer;
+}
+
+#i18ncur img {
+    width: 32px;
+    height: 32px;
+}
+
+#i18nsel {
+    position: absolute;
+    right: 0;
+    top: 36px;
+    padding: 4px;
+    background-color: #f5f2ea;
+    border: 1px solid #d8d2c2;
 }
 
 #i18nbox button {
     margin: 0;
     padding: 2px;
     line-height: 0;
+    width: auto;
+    display: inline-block;
+    background: none;
+    color: inherit;
+}
+
+#i18nbox button img {
+    width: 32px;
+    height: 32px;
+    display: block;
 }
 
 h1 {
