@@ -213,6 +213,44 @@ function in_square(p) {
     return true;
 }
 
+function seg_inside(a, b) {
+    var lo = 0, hi = 1;
+    for (var c = 0; c < 2; c++) {
+        var v0 = a[c], v1 = b[c];
+        if (v1 === v0) {
+            if (v0 <= EPS || v0 >= GRID - EPS)
+                return false;
+        } else {
+            var t0 = (0 - v0) / (v1 - v0);
+            var t1 = (GRID - v0) / (v1 - v0);
+            if (t0 > t1) {
+                var tmp = t0;
+                t0 = t1;
+                t1 = tmp;
+            }
+            lo = Math.max(lo, t0);
+            hi = Math.min(hi, t1);
+            if (lo >= hi)
+                return false;
+        }
+    }
+    return lo < 1 && hi > 0;
+}
+
+function straddles(p) {
+    var ws = piece_vertices(p);
+    if (in_square(p))
+        return false;
+    for (var i = 0; i < ws.length; i++)
+        if (ws[i][0] > EPS && ws[i][0] < GRID - EPS &&
+                ws[i][1] > EPS && ws[i][1] < GRID - EPS)
+            return true;
+    for (var i = 0; i < ws.length; i++)
+        if (seg_inside(ws[i], ws[(i + 1) % ws.length]))
+            return true;
+    return false;
+}
+
 function solve_ok(ps) {
     ps = ps || pieces;
     for (var i = 0; i < ps.length; i++)
@@ -432,8 +470,8 @@ function boot() {
     });
     function end_drag() {
         if (active) {
-            var clear = true;
-            for (var i = 0; i < pieces.length; i++)
+            var clear = !straddles(active);
+            for (var i = 0; i < pieces.length && clear; i++)
                 if (pieces[i] !== active && overlap(active, pieces[i]))
                     clear = false;
             if (clear) {
@@ -466,6 +504,8 @@ if (typeof module !== "undefined" && module.exports)
         seg_proper: seg_proper,
         overlap: overlap,
         in_square: in_square,
+        seg_inside: seg_inside,
+        straddles: straddles,
         solve_ok: solve_ok,
         in_place_count: in_place_count,
         bbox: bbox,
