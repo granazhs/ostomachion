@@ -35,6 +35,8 @@ var canvas;
 var ctx;
 var drag_dx;
 var drag_dy;
+var drag_ox;
+var drag_oy;
 
 function area_centroid(poly) {
     var A = 0, cx = 0, cy = 0, n = poly.length;
@@ -408,6 +410,8 @@ function boot() {
             active = p;
             drag_dx = g[0] - p.x;
             drag_dy = g[1] - p.y;
+            drag_ox = p.x;
+            drag_oy = p.y;
             move_to_top(p);
             try {
                 canvas.setPointerCapture(e.pointerId);
@@ -428,7 +432,16 @@ function boot() {
     });
     function end_drag() {
         if (active) {
-            snap(active);
+            var clear = true;
+            for (var i = 0; i < pieces.length; i++)
+                if (pieces[i] !== active && overlap(active, pieces[i]))
+                    clear = false;
+            if (clear) {
+                snap(active);
+            } else {
+                active.x = drag_ox;
+                active.y = drag_oy;
+            }
             active = null;
             update_status();
             check_solved();
