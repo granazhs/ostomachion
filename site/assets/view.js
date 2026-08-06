@@ -453,6 +453,7 @@ function rotate_active() {
             active.rot = m;
         else
             active.rot = rot_new;
+        snap(active);
     }
 }
 
