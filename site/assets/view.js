@@ -72,25 +72,49 @@ function make_pieces() {
 }
 
 function tray_layout(ps) {
-    var cols = [13.8, 20.7, 27.6];
-    var pitch = 2.4;
+    var tray_x = 13.2;
+    var tray_y = 0.5;
+    var width_budget = 21.4;
+    var gap = 0.5;
     var order = [];
     for (var i = 0; i < ps.length; i++)
         order.push(i);
     order.sort(function(a, b) {
         var ha = bbox(ps[a].v)[3] - bbox(ps[a].v)[1];
         var hb = bbox(ps[b].v)[3] - bbox(ps[b].v)[1];
-        return hb - ha;
+        return hb !== ha ? hb - ha : a - b;
     });
+    var rows = [];
     for (var k = 0; k < order.length; k++) {
-        var i = order[k];
-        var col = k % 3;
-        var row = Math.floor(k / 3);
-        var bb = bbox(ps[i].v);
-        var jx = ((i * 37) % 10) / 10 * 0.6 - 0.3;
-        var jy = ((i * 53) % 10) / 10 * 0.6 - 0.3;
-        ps[i].x = cols[col] + jx - bb[0];
-        ps[i].y = 0.8 + row * pitch + jy - bb[1];
+        var idx = order[k];
+        var bb = bbox(ps[idx].v);
+        var w = bb[2] - bb[0];
+        var h = bb[3] - bb[1];
+        var placed = false;
+        for (var r = 0; r < rows.length; r++) {
+            if (rows[r].w + w + gap <= width_budget) {
+                rows[r].items.push(idx);
+                rows[r].w += w + gap;
+                if (h > rows[r].h)
+                    rows[r].h = h;
+                placed = true;
+                break;
+            }
+        }
+        if (!placed)
+            rows.push({w: w + gap, h: h, items: [idx]});
+    }
+    var cy = tray_y;
+    for (var r = 0; r < rows.length; r++) {
+        var cx = tray_x;
+        for (var m = 0; m < rows[r].items.length; m++) {
+            var i2 = rows[r].items[m];
+            var bb2 = bbox(ps[i2].v);
+            ps[i2].x = cx - bb2[0];
+            ps[i2].y = cy - bb2[1];
+            cx += (bb2[2] - bb2[0]) + gap;
+        }
+        cy += rows[r].h + gap;
     }
 }
 
