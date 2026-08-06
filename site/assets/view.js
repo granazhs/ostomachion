@@ -382,6 +382,8 @@ function fit_embedded() {
 
 function boot() {
     canvas = document.getElementById("canvas");
+    canvas.width = CANVAS_W;
+    canvas.height = CANVAS_H;
     ctx = canvas.getContext("2d");
     pieces = make_pieces();
     tray_layout(pieces);
