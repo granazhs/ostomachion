@@ -135,10 +135,12 @@ function rotflip_off(p, ox, oy) {
     return [ox, oy];
 }
 
-function piece_vertices(p) {
+function piece_vertices(p, x, y) {
+    var px = x === undefined ? p.x : x;
+    var py = y === undefined ? p.y : y;
     var o0 = rotflip_off(p, p.v[0][0] - p.cx, p.v[0][1] - p.cy);
-    var w0x = p.cx + o0[0] + p.x;
-    var w0y = p.cy + o0[1] + p.y;
+    var w0x = p.cx + o0[0] + px;
+    var w0y = p.cy + o0[1] + py;
     var res = [[w0x, w0y]];
     for (var i = 1; i < p.v.length; i++) {
         var o = rotflip_off(p, p.v[i][0] - p.v[0][0], p.v[i][1] - p.v[0][1]);
@@ -147,16 +149,24 @@ function piece_vertices(p) {
     return res;
 }
 
+function snap_pos(p) {
+    var x = p.x, y = p.y;
+    var ws = piece_vertices(p, x, y);
+    var w0 = ws[0];
+    x += Math.round(w0[0]) - w0[0];
+    y += Math.round(w0[1]) - w0[1];
+    ws = piece_vertices(p, x, y);
+    w0 = ws[0];
+    x += Math.round(w0[0]) - w0[0];
+    y += Math.round(w0[1]) - w0[1];
+    return [x, y];
+}
+
 function snap(p) {
     p.rot = ((Math.round(p.rot / 90) * 90) % 360 + 360) % 360;
-    var ws = piece_vertices(p);
-    var w0 = ws[0];
-    p.x += Math.round(w0[0]) - w0[0];
-    p.y += Math.round(w0[1]) - w0[1];
-    var ws2 = piece_vertices(p);
-    var u0 = ws2[0];
-    p.x += Math.round(u0[0]) - u0[0];
-    p.y += Math.round(u0[1]) - u0[1];
+    var s = snap_pos(p);
+    p.x = s[0];
+    p.y = s[1];
 }
 
 function pip(pt, poly) {
@@ -293,6 +303,13 @@ function move_to_top(p) {
         pieces.splice(i, 1);
         pieces.push(p);
     }
+}
+
+function overlaps_any(p) {
+    for (var i = 0; i < pieces.length; i++)
+        if (pieces[i] !== p && overlap(p, pieces[i]))
+            return true;
+    return false;
 }
 
 function update_status() {
@@ -470,13 +487,21 @@ function boot() {
     });
     function end_drag() {
         if (active) {
-            var clear = !straddles(active);
-            for (var i = 0; i < pieces.length && clear; i++)
-                if (pieces[i] !== active && overlap(active, pieces[i]))
-                    clear = false;
-            if (clear) {
-                snap(active);
+            var ok = false;
+            var raw_x = active.x, raw_y = active.y;
+            var sxy = snap_pos(active);
+            active.x = sxy[0];
+            active.y = sxy[1];
+            if (in_square(active) && !overlaps_any(active)) {
+                ok = true;
             } else {
+                active.x = raw_x;
+                active.y = raw_y;
+                snap(active);
+                if (!straddles(active) && !overlaps_any(active))
+                    ok = true;
+            }
+            if (!ok) {
                 active.x = drag_ox;
                 active.y = drag_oy;
             }
@@ -500,6 +525,7 @@ if (typeof module !== "undefined" && module.exports)
         tray_layout: tray_layout,
         piece_vertices: piece_vertices,
         snap: snap,
+        snap_pos: snap_pos,
         pip: pip,
         seg_proper: seg_proper,
         overlap: overlap,
