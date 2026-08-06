@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title data-i18nkey="title">Ostomachion</title>
+    <script>
+     const is_embedded = false;
+    </script>
+    <script src="assets/jquery.js"></script>
+    <script src="assets/i18n.js"></script>
+    <script src="assets/view.js"></script>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div id="i18nbox">
+        <button onclick="translate('en')"><img src="assets/flag_en.png" alt="en"></button>
+        <button onclick="translate('de')"><img src="assets/flag_de.png" alt="de"></button>
+        <button onclick="translate('gr')"><img src="assets/flag_gr.png" alt="gr"></button>
+        <button onclick="translate('it')"><img src="assets/flag_it.png" alt="it"></button>
+        <button onclick="translate('es')"><img src="assets/flag_es.png" alt="es"></button>
+        <button onclick="translate('fr')"><img src="assets/flag_fr.png" alt="fr"></button>
+    </div>
+    <canvas id="canvas" width="1120" height="700"></canvas>
+    <div id="controls">
+        <h1 data-i18nkey="title">Ostomachion</h1>
+        <p id="instr" data-i18nkey="instr"></p>
+        <button id="rotate-button" data-i18nkey="rotate">Rotate</button>
+        <button id="flip-button" data-i18nkey="flip">Flip</button>
+        <button id="reset-button" data-i18nkey="reset">Reset</button>
+        <p id="status"></p>
+        <p id="credit" data-i18nkey="credit"></p>
+    </div>
+</body>
+</html>
