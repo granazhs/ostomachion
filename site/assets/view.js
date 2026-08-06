@@ -5,6 +5,11 @@ const BOARD_X = 28;
 const BOARD_Y = 36;
 const EPS = 1e-9;
 const GRID = 12;
+const ROT_STEP = 5;
+const ROT_SNAP_TOL = 3;
+const ROT_AXIS_TOL = 2;
+const SLIDE_DIST = 2;
+const FLUSH_GAP = 1e-4;
 
 const COLORS = ["#E53935", "#D81B60", "#8E24AA", "#5E35B1", "#3949AB",
                 "#1E88E5", "#00897B", "#43A047", "#C0CA33", "#F4511E",
@@ -120,36 +125,60 @@ function tray_layout(ps) {
     }
 }
 
-function rotflip_off(p, ox, oy) {
+function norm360(r) {
+    return ((r % 360) + 360) % 360;
+}
+
+function ang_dist(a, b) {
+    var d = Math.abs(norm360(a) - norm360(b));
+    return Math.min(d, 360 - d);
+}
+
+function rot_axis_mult(r) {
+    var x = norm360(r);
+    return norm360(Math.round(x / 90) * 90);
+}
+
+function rot_axis_aligned(r) {
+    return ang_dist(r, rot_axis_mult(r)) < 1e-6;
+}
+
+function rotflip_off(p, ox, oy, rot) {
     if (p.flip)
         ox = -ox;
-    var r = p.rot % 360;
-    if (r < 0)
-        r += 360;
+    var r = rot === undefined ? p.rot : rot;
+    r = norm360(r);
     if (r === 90)
         return [-oy, ox];
     if (r === 180)
         return [-ox, -oy];
     if (r === 270)
         return [oy, -ox];
-    return [ox, oy];
+    if (r === 0)
+        return [ox, oy];
+    var rad = r * Math.PI / 180;
+    var c = Math.cos(rad);
+    var s = Math.sin(rad);
+    return [ox * c - oy * s, ox * s + oy * c];
 }
 
-function piece_vertices(p, x, y) {
+function piece_vertices(p, x, y, rot) {
     var px = x === undefined ? p.x : x;
     var py = y === undefined ? p.y : y;
-    var o0 = rotflip_off(p, p.v[0][0] - p.cx, p.v[0][1] - p.cy);
+    var o0 = rotflip_off(p, p.v[0][0] - p.cx, p.v[0][1] - p.cy, rot);
     var w0x = p.cx + o0[0] + px;
     var w0y = p.cy + o0[1] + py;
     var res = [[w0x, w0y]];
     for (var i = 1; i < p.v.length; i++) {
-        var o = rotflip_off(p, p.v[i][0] - p.v[0][0], p.v[i][1] - p.v[0][1]);
+        var o = rotflip_off(p, p.v[i][0] - p.v[0][0], p.v[i][1] - p.v[0][1], rot);
         res.push([w0x + o[0], w0y + o[1]]);
     }
     return res;
 }
 
 function snap_pos(p) {
+    if (!rot_axis_aligned(p.rot))
+        return [p.x, p.y];
     var x = p.x, y = p.y;
     var ws = piece_vertices(p, x, y);
     var w0 = ws[0];
@@ -163,10 +192,11 @@ function snap_pos(p) {
 }
 
 function snap(p) {
-    p.rot = ((Math.round(p.rot / 90) * 90) % 360 + 360) % 360;
-    var s = snap_pos(p);
-    p.x = s[0];
-    p.y = s[1];
+    if (rot_axis_aligned(p.rot)) {
+        var s = snap_pos(p);
+        p.x = s[0];
+        p.y = s[1];
+    }
 }
 
 function pip(pt, poly) {
@@ -321,14 +351,109 @@ function update_status() {
         $("#status").text(i18n[cur_lang]["status"](in_place_count())).removeClass("solved");
 }
 
+function edge_angle(e) {
+    var dx = e[1][0] - e[0][0];
+    var dy = e[1][1] - e[0][1];
+    var a = norm360(Math.atan2(dy, dx) * 180 / Math.PI);
+    return a >= 180 ? a - 180 : a;
+}
+
+function norm_deg(d) {
+    while (d > 90) d -= 180;
+    while (d < -90) d += 180;
+    return d;
+}
+
+function slide_flush(p, rot_new, edgeA, q, edgeB) {
+    var saved = {rot: p.rot, x: p.x, y: p.y};
+    p.rot = rot_new;
+    var wsA = piece_vertices(p);
+    p.rot = saved.rot;
+    var wsB = piece_vertices(q);
+    var a1 = wsA[edgeA];
+    var b1 = wsB[edgeB], b2 = wsB[(edgeB + 1) % wsB.length];
+    var dx = b2[0] - b1[0], dy = b2[1] - b1[1];
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1e-9)
+        return null;
+    var nx = -dy / len, ny = dx / len;
+    var d = (a1[0] - b1[0]) * nx + (a1[1] - b1[1]) * ny;
+    if (Math.abs(d) > SLIDE_DIST)
+        return null;
+    var gap = d >= 0 ? FLUSH_GAP : -FLUSH_GAP;
+    var px = p.x + (-d + gap) * nx;
+    var py = p.y + (-d + gap) * ny;
+    p.x = px;
+    p.y = py;
+    p.rot = rot_new;
+    var ok = !overlaps_any(p);
+    p.x = saved.x;
+    p.y = saved.y;
+    p.rot = saved.rot;
+    if (!ok)
+        return null;
+    return {rot: rot_new, x: px, y: py};
+}
+
+function bbox_dist(bbA, bbB) {
+    var dx = Math.max(0, Math.max(bbA[0] - bbB[2], bbB[0] - bbA[2]));
+    var dy = Math.max(0, Math.max(bbA[1] - bbB[3], bbB[1] - bbA[3]));
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+function edge_snap_candidate(p, rot_new) {
+    var wsA = piece_vertices(p, p.x, p.y, rot_new);
+    var bbA = bbox(wsA);
+    var best = null;
+    var bestDiff = Infinity;
+    for (var i = 0; i < pieces.length; i++) {
+        var q = pieces[i];
+        if (q === p)
+            continue;
+        var wsB = piece_vertices(q);
+        if (bbox_dist(bbA, bbox(wsB)) > SLIDE_DIST)
+            continue;
+        var nb = wsB.length;
+        for (var a = 0; a < wsA.length; a++) {
+            var eA = [wsA[a], wsA[(a + 1) % wsA.length]];
+            var alpha = edge_angle(eA);
+            for (var b = 0; b < nb; b++) {
+                var eB = [wsB[b], wsB[(b + 1) % nb]];
+                var beta = edge_angle(eB);
+                var diff = norm_deg(beta - alpha);
+                if (Math.abs(diff) <= ROT_SNAP_TOL && Math.abs(diff) < bestDiff) {
+                    var slid = slide_flush(p, rot_new + diff, a, q, b);
+                    if (slid) {
+                        bestDiff = Math.abs(diff);
+                        best = slid;
+                    }
+                }
+            }
+        }
+    }
+    return best;
+}
+
 function rotate_active() {
     if (!active) {
         active = hover || pieces[pieces.length - 1];
         if (!active)
             return;
     }
-    active.rot = (active.rot + 90) % 360;
-    snap(active);
+    var rot_new = active.rot + ROT_STEP;
+    var slid = edge_snap_candidate(active, rot_new);
+    if (slid) {
+        active.rot = slid.rot;
+        active.x = slid.x;
+        active.y = slid.y;
+    } else {
+        var r = norm360(rot_new);
+        var m = rot_axis_mult(r);
+        if (ang_dist(r, m) <= ROT_AXIS_TOL)
+            active.rot = m;
+        else
+            active.rot = rot_new;
+    }
 }
 
 function flip_active() {
@@ -526,6 +651,18 @@ if (typeof module !== "undefined" && module.exports)
         piece_vertices: piece_vertices,
         snap: snap,
         snap_pos: snap_pos,
+        rotate_active: rotate_active,
+        edge_snap_candidate: edge_snap_candidate,
+        slide_flush: slide_flush,
+        edge_angle: edge_angle,
+        norm_deg: norm_deg,
+        rot_axis_aligned: rot_axis_aligned,
+        rot_axis_mult: rot_axis_mult,
+        bbox_dist: bbox_dist,
+        ROT_STEP: ROT_STEP,
+        ROT_SNAP_TOL: ROT_SNAP_TOL,
+        SLIDE_DIST: SLIDE_DIST,
+        FLUSH_GAP: FLUSH_GAP,
         pip: pip,
         seg_proper: seg_proper,
         overlap: overlap,
