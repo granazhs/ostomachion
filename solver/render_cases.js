@@ -120,26 +120,17 @@ function canonSegStr(P, Q) {
 
 // returns array of actual spanning cut segments [{A,B}, ...]
 function spanningSegs(sol) {
-    const byLine = new Map();
+    const full = [];
     for (const sec of maximalSections(sol)) {
         const [ux, uy] = canonD(sec.P1[0] - sec.P0[0], sec.P1[1] - sec.P0[1]);
         const c = uy * sec.P0[0] - ux * sec.P0[1];
-        const key = ux + "," + uy + "," + c;
-        if (!byLine.has(key)) byLine.set(key, { ux, uy, c, t0: sec.t0, t1: sec.t1 });
-        else {
-            const L = byLine.get(key);
-            L.t0 = Math.min(L.t0, sec.t0); L.t1 = Math.max(L.t1, sec.t1);
-        }
-    }
-    const full = [];
-    for (const L of byLine.values()) {
-        const pts = chordPts(L.ux, L.uy, L.c);
+        const pts = chordPts(ux, uy, c);
         if (pts.length < 2) continue;
-        const ts = pts.map(([x, y]) => L.ux * x + L.uy * y);
+        const ts = pts.map(([x, y]) => ux * x + uy * y);
         const t0 = Math.min(...ts), t1 = Math.max(...ts);
-        if (L.t0 <= t0 + 1e-9 && L.t1 >= t1 - 1e-9) {
-            const A = pts.find(([x, y]) => Math.abs(L.ux * x + L.uy * y - t0) < 1e-9);
-            const B = pts.find(([x, y]) => Math.abs(L.ux * x + L.uy * y - t1) < 1e-9);
+        if (sec.t0 <= t0 + 1e-9 && sec.t1 >= t1 - 1e-9) {
+            const A = pts.find(([x, y]) => Math.abs(ux * x + uy * y - t0) < 1e-9);
+            const B = pts.find(([x, y]) => Math.abs(ux * x + uy * y - t1) < 1e-9);
             full.push({ A, B });
         }
     }
@@ -180,8 +171,12 @@ for (const sol of data.solutions) {
 const rows = [...seenG.values()];
 console.log(`gallery rows (unlabeledKey): ${rows.length}`);
 
+const REMOVED_CHORD = "0,3;6,0"; // CORNER-REGION DIAG (1/2) — left out of the game
+const keptCuts = s => spanningCuts(s).filter(c => c !== REMOVED_CHORD);
+const keptSegs = s => spanningSegs(s).filter(seg => canonSegStr(seg.A, seg.B) !== REMOVED_CHORD);
+
 const cutsOf = new Map();
-for (const s of rows) cutsOf.set(s, spanningCuts(s));
+for (const s of rows) cutsOf.set(s, keptCuts(s));
 
 const groups = new Map();
 for (const s of rows) {
@@ -191,7 +186,7 @@ for (const s of rows) {
     groups.get(key).n++;
 }
 const ordered = [...groups.entries()].sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-console.log(`cases over gallery rows: ${ordered.length} -> ${ordered.map(e => e[1].n).join(",")}`);
+console.log(`cases over gallery rows: ${ordered.length} -> ${ordered.map(e => e[1].n).join(",")} (${rows.length} rows)`);
 
 const rowCase = rows.map(s => ordered.findIndex(e => e[0] === cutsOf.get(s).join("|")) + 1);
 
@@ -203,7 +198,7 @@ rows.forEach((s, r) => {
     const c = rowCase[r];
     if (repRow[c - 1] === null) repRow[c - 1] = s;
 });
-const caseSegs = repRow.map(s => spanningSegs(s));
+const caseSegs = repRow.map(s => keptSegs(s));
 
 const outDir = path.join(__dirname, "gallery");
 
@@ -239,12 +234,17 @@ ordered.forEach(([key, info], i) => {
         const n = nameChord(c);
         mult[n] = (mult[n] || 0) + 1;
     }
-    const tags = Object.entries(mult).map(([n, m]) =>
-        `<span class="chordtag" style="background:${chordColor(n)}">${n}${m > 1 ? " &times;" + m : ""}</span>`).join("");
+    const tags = info.cuts.length === 0
+        ? `<span class="chordtag" style="background:#8a8070">NO FULL SPANNING CUT</span>`
+        : Object.entries(mult).map(([n, m]) =>
+            `<span class="chordtag" style="background:${chordColor(n)}">${n}${m > 1 ? " &times;" + m : ""}</span>`).join("");
 
     const rowNums = [];
     rows.forEach((s, r) => { if (rowCase[r] === num) rowNums.push(r + 1); });
     const pct = (info.n / rows.length * 100).toFixed(1);
+    const caseinfo = info.cuts.length === 0
+        ? "None of the kept cut-lines crosses the board from end to end here; the only full-spanning cut these solutions had was a corner-region diagonal, which is left out of the game."
+        : "The board is crossed end-to-end by every full cut-line listed above; other internal joints stay short of the edges. The diagram draws the cut-lines of one representative solution of the case; mirror or rotated orientations of the same pattern occur in the other solutions shown below.";
     const thumbs = rowNums.map(rn => {
         const n = String(rn).padStart(4, "0");
         return `<a class="th" href="solutions_unlabeled_${n}.svg" title="gallery solution ${rn} \u2014 click to open"><img loading="lazy" src="solutions_unlabeled_${n}.svg" alt="solution ${rn}"><div>${rn}</div></a>`;
@@ -257,7 +257,7 @@ ordered.forEach(([key, info], i) => {
       <div class="caseno">Case ${num}</div>
       <div class="casestats">${info.n} of ${rows.length} solutions (${pct}%)</div>
       <div class="casechords">${tags}</div>
-      <div class="caseinfo">The board is crossed end-to-end by every full cut-line listed above; other internal joints stay short of the edges. The diagram draws the cut-lines of one representative solution of the case; mirror or rotated orientations of the same pattern occur in the other solutions shown below.</div>
+      <div class="caseinfo">${caseinfo}</div>
     </div>
   </div>
   <div class="thumbgrid">
@@ -270,7 +270,7 @@ const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Ostomachion &mdash; spanning-cut cases (${ordered.length} over ${rows.length} solutions)</title>
+<title>Ostomachion &mdash; spanning-cut cases (${ordered.length} cases)</title>
 <style>
     body { background:#f5f2ea; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; margin:0; padding:16px; }
     h1 { font-weight:300; color:#444; margin:4px 0 4px 4px; }
@@ -294,7 +294,7 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion &mdash; spanning-cut cases</h1>
-<p class="sub">The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). ${ordered.length} distinct cases; every tiling has at least one. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it, most common first. <a href="flips.html">Flip table</a></p>
+<p class="sub">The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Corner-region diagonals are left out of the game; solutions are re-grouped by the cut-lines that remain, so none is dropped. ${ordered.length} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="flips.html">Flip table</a></p>
 ${blocks.join("\n")}
 </body>
 </html>
