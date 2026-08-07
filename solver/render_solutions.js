@@ -218,6 +218,12 @@ const html = `<!DOCTYPE html>
     .cell { background:#fff; border:1px solid #d8d2c2; padding:8px; }
     .num { font-size:12px; color:#8a8070; text-align:center; padding-bottom:6px; }
     svg { display:block; }
+    #orientations { display:none; margin-top:18px; }
+    #orientations .otitle { font-size:15px; color:#444; font-weight:300; margin:0 0 8px 4px; }
+    #orientations .ogrid { display:flex; flex-wrap:wrap; gap:8px; }
+    #orientations .ocell { background:#fff; border:1px solid #d8d2c2; padding:4px; }
+    #orientations .ocap { font-size:11px; color:#8a8070; text-align:center; padding-top:2px; }
+    #orientations .ocap b { color:#b03a2e; font-weight:normal; }
 </style>
 </head>
 <body>
@@ -231,11 +237,13 @@ const html = `<!DOCTYPE html>
     <button data-pk="J">J</button><button data-pk="K">K</button><button data-pk="L">L</button>
     <button data-pk="M">M</button><button data-pk="N">N</button>
 </div>
+<div id="orientations"></div>
 <div class="grid">
 ${cells.join("\n")}
 </div>
 <script>
     var btns = document.querySelectorAll("#pkeys button");
+    var OCELL = 22, OMARGIN = 18;
     function setPieces(pk) {
         var polys = document.querySelectorAll(".cell polygon");
         for (var i = 0; i < polys.length; i++) {
@@ -248,6 +256,95 @@ ${cells.join("\n")}
             btns[j].classList.toggle("active", btns[j].getAttribute("data-pk") === pk);
         }
     }
+    function collectOrientations(pk) {
+        var out = {};
+        var cells = document.querySelectorAll(".cell");
+        for (var i = 0; i < cells.length; i++) {
+            var svg = cells[i].querySelector("svg");
+            if (!svg) continue;
+            var kids = svg.children;
+            var cur = null;
+            for (var k = 0; k < kids.length; k++) {
+                var el = kids[k];
+                if (el.tagName === "polygon") {
+                    if (cur) addOrientation(out, cur);
+                    cur = { piece: el.getAttribute("data-piece"), verts: [], dots: [] };
+                    var pts = el.getAttribute("points").trim().split(/\\s+/);
+                    for (var p = 0; p < pts.length; p++) {
+                        var c = pts[p].split(",");
+                        cur.verts.push([(+c[0] - OMARGIN) / OCELL, (+c[1] - OMARGIN) / OCELL]);
+                    }
+                } else if (el.tagName === "circle" && cur) {
+                    cur.dots.push([(+el.getAttribute("cx") - OMARGIN) / OCELL, (+el.getAttribute("cy") - OMARGIN) / OCELL]);
+                }
+            }
+            if (cur) addOrientation(out, cur);
+        }
+        return out;
+    }
+    function addOrientation(out, cur) {
+        if (cur.piece === "all" || cur.piece === null) return;
+        var minx = Infinity, miny = Infinity;
+        for (var i = 0; i < cur.verts.length; i++) {
+            if (cur.verts[i][0] < minx) minx = cur.verts[i][0];
+            if (cur.verts[i][1] < miny) miny = cur.verts[i][1];
+        }
+        var norm = [], dots = [];
+        for (var j = 0; j < cur.verts.length; j++) norm.push([cur.verts[j][0] - minx, cur.verts[j][1] - miny]);
+        for (var d = 0; d < cur.dots.length; d++) dots.push([cur.dots[d][0] - minx, cur.dots[d][1] - miny]);
+        var key = JSON.stringify(norm.slice().sort(function(a, b) { return a[0] - b[0] || a[1] - b[1]; }));
+        if (!out[cur.piece]) out[cur.piece] = {};
+        var entry = out[cur.piece][key];
+        if (!entry) out[cur.piece][key] = { piece: cur.piece, verts: norm, dots: dots, count: 1 };
+        else entry.count++;
+    }
+    function renderOrientationSvg(o, color) {
+        var cell = 20, pad = 6;
+        var maxx = 0, maxy = 0;
+        for (var i = 0; i < o.verts.length; i++) {
+            if (o.verts[i][0] > maxx) maxx = o.verts[i][0];
+            if (o.verts[i][1] > maxy) maxy = o.verts[i][1];
+        }
+        var w = pad * 2 + (maxx + 1) * cell, h = pad * 2 + (maxy + 1) * cell;
+        var g = ['<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">'];
+        g.push('<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="#f5f2ea"/>');
+        for (var gx = 0; gx <= maxx + 1; gx++)
+            g.push('<line x1="' + (pad + gx * cell) + '" y1="' + pad + '" x2="' + (pad + gx * cell) + '" y2="' + (pad + (maxy + 1) * cell) + '" stroke="#c9c9c9" stroke-width="1"/>');
+        for (var gy = 0; gy <= maxy + 1; gy++)
+            g.push('<line x1="' + pad + '" y1="' + (pad + gy * cell) + '" x2="' + (pad + (maxx + 1) * cell) + '" y2="' + (pad + gy * cell) + '" stroke="#c9c9c9" stroke-width="1"/>');
+        g.push('<polygon points="' + o.verts.map(function(v) { return (pad + v[0] * cell).toFixed(1) + "," + (pad + v[1] * cell).toFixed(1); }).join(" ") + '" fill="' + color + '" stroke="#222" stroke-width="1.5" stroke-linejoin="round"/>');
+        for (var i2 = 0; i2 < o.dots.length; i2++)
+            g.push('<circle cx="' + (pad + o.dots[i2][0] * cell).toFixed(1) + '" cy="' + (pad + o.dots[i2][1] * cell).toFixed(1) + '" r="2" fill="#222"/>');
+        g.push('</svg>');
+        return g.join("");
+    }
+    function showOrientations(pk) {
+        var box = document.getElementById("orientations");
+        if (pk === "all") {
+            box.innerHTML = "";
+            box.style.display = "none";
+            return;
+        }
+        var colorEl = document.querySelector(".cell polygon[data-piece=\\"" + pk + "\\"]");
+        var color = colorEl ? colorEl.getAttribute("data-color") : "#444";
+        var all = collectOrientations(pk);
+        var list = [];
+        for (var key in all[pk]) list.push(all[pk][key]);
+        list.sort(function(a, b) {
+            var fa = a.dots.length ? 1 : 0, fb = b.dots.length ? 1 : 0;
+            if (fa !== fb) return fa - fb;
+            return b.count - a.count;
+        });
+        var h = ["<div class=\\"otitle\\">Orientations of " + pk + " (" + list.length + ")</div><div class=\\"ogrid\\">"];
+        for (var i = 0; i < list.length; i++) {
+            var o = list[i];
+            h.push("<div class=\\"ocell\\">" + renderOrientationSvg(o, color) +
+                "<div class=\\"ocap\\">" + (o.dots.length ? "<b>flipped</b> " : "") + "&times;" + o.count + "</div></div>");
+        }
+        h.push("</div>");
+        box.innerHTML = h.join("");
+        box.style.display = "block";
+    }
     for (var k = 0; k < btns.length; k++) {
         (function(btn) {
             btn.addEventListener("click", function() {
@@ -255,6 +352,7 @@ ${cells.join("\n")}
                 if (btn.classList.contains("active"))
                     pk = "all";
                 setPieces(pk);
+                showOrientations(pk);
             });
         })(btns[k]);
     }
