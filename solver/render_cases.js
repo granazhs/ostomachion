@@ -171,9 +171,10 @@ for (const sol of data.solutions) {
 const rows = [...seenG.values()];
 console.log(`gallery rows (unlabeledKey): ${rows.length}`);
 
-const REMOVED_CHORD = "0,3;6,0"; // CORNER-REGION DIAG (1/2) — left out of the game
-const keptCuts = s => spanningCuts(s).filter(c => c !== REMOVED_CHORD);
-const keptSegs = s => spanningSegs(s).filter(seg => canonSegStr(seg.A, seg.B) !== REMOVED_CHORD);
+// cut-lines left out of the game: CORNER-REGION DIAG (1/2) and 45° MIDPOINT DIAG
+const REMOVED_CHORDS = new Set(["0,3;6,0", "0,6;6,0"]);
+const keptCuts = s => spanningCuts(s).filter(c => !REMOVED_CHORDS.has(c));
+const keptSegs = s => spanningSegs(s).filter(seg => !REMOVED_CHORDS.has(canonSegStr(seg.A, seg.B)));
 
 const samePt = (a, b) => a[0] === b[0] && a[1] === b[1];
 
@@ -284,7 +285,7 @@ ordered.forEach(([key, info], i) => {
     rows.forEach((s, r) => { if (rowCase[r] === num) rowNums.push(r + 1); });
     const pct = (info.n / rows.length * 100).toFixed(1);
     const caseinfo = info.cuts.length === 0
-        ? "None of the kept cut-lines crosses the board from end to end here; the only full-spanning cut these solutions had was a corner-region diagonal, which is left out of the game."
+        ? "None of the kept cut-lines crosses the board from end to end here; the only full-spanning cuts these solutions had were corner-region or 45\u00b0 midpoint diagonals, which are left out of the game."
         : "The board is crossed end-to-end by every full cut-line listed above; other internal joints stay short of the edges. " + shapeNotes + " The diagram draws the cut-lines of one representative solution of the case; mirror or rotated orientations of the same pattern occur in the other solutions shown below.";
     const thumbs = rowNums.map(rn => {
         const n = String(rn).padStart(4, "0");
@@ -335,7 +336,7 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion &mdash; spanning-cut cases</h1>
-<p class="sub">The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Corner-region diagonals are left out of the game; solutions are re-grouped by the cut-lines that remain, so none is dropped. When the same diagonal appears twice, the case is split by whether the two run parallel or converge at one point on the board edge. ${ordered.length} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="flips.html">Flip table</a></p>
+<p class="sub">The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Corner-region and 45&deg; midpoint diagonals are left out of the game; solutions are re-grouped by the cut-lines that remain, so none is dropped. When the same diagonal appears twice, the case is split by whether the two run parallel or converge at one point on the board edge. ${ordered.length} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="flips.html">Flip table</a></p>
 ${blocks.join("\n")}
 </body>
 </html>
