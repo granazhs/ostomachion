@@ -256,7 +256,7 @@ ${cells.join("\n")}
         }
         for (var j = 0; j < btns.length; j++) {
             var pk = btns[j].getAttribute("data-pk");
-            btns[j].classList.toggle("active", pk === "all" ? mode !== "all" : !!activePieces[pk]);
+            btns[j].classList.toggle("active", pk === "all" ? mode === "all" : !!activePieces[pk]);
         }
     }
     function collectOrientations(pk) {
@@ -370,6 +370,7 @@ ${cells.join("\n")}
             });
         })(btns[k]);
     }
+    setPieces();
 </script>
 </body>
 </html>
