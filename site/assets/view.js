@@ -36,6 +36,7 @@ var pieces;
 var active;
 var hover;
 var solved_flag;
+var isolated;
 var canvas;
 var ctx;
 var drag_dx;
@@ -513,7 +514,10 @@ function draw_piece(p) {
     for (var i = 1; i < ws.length; i++)
         ctx.lineTo(BOARD_X + ws[i][0] * SCALE, BOARD_Y + ws[i][1] * SCALE);
     ctx.closePath();
-    ctx.fillStyle = p.color;
+    if (isolated === null || pieces.indexOf(p) === isolated)
+        ctx.fillStyle = p.color;
+    else
+        ctx.fillStyle = "rgba(0,0,0,0)";
     ctx.fill();
     if (solved_flag) {
         ctx.lineWidth = 3;
@@ -563,6 +567,36 @@ function fit_embedded() {
     $("#controls").css("transform-origin", "left top");
 }
 
+function update_piece_keys() {
+    var box = document.getElementById("piece-keys");
+    if (!box)
+        return;
+    var btns = box.querySelectorAll(".pkey");
+    for (var i = 0; i < btns.length; i++)
+        btns[i].classList.toggle("active", isolated === i);
+}
+
+function build_piece_keys() {
+    var box = document.getElementById("piece-keys");
+    if (!box)
+        return;
+    var labels = "ABCDEFGHIJKLMN";
+    for (var i = 0; i < labels.length; i++) {
+        (function(idx) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "pkey";
+            b.textContent = labels[idx];
+            b.addEventListener("click", function() {
+                isolated = isolated === idx ? null : idx;
+                update_piece_keys();
+            });
+            box.appendChild(b);
+        })(i);
+    }
+    update_piece_keys();
+}
+
 function boot() {
     canvas = document.getElementById("canvas");
     canvas.width = CANVAS_W;
@@ -573,6 +607,8 @@ function boot() {
     active = null;
     hover = null;
     solved_flag = false;
+    isolated = null;
+    build_piece_keys();
     i18n_load();
     $("#rotate-button").on("click", rotate_active);
     $("#flip-button").on("click", flip_active);
