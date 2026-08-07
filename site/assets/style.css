@@ -71,27 +71,6 @@ html, body {
     display: block;
 }
 
-#piece-keys {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px;
-    margin-bottom: 10px;
-}
-
-#piece-keys .pkey {
-    width: 30px;
-    height: 30px;
-    margin: 0;
-    padding: 0;
-    font-size: 15px;
-    line-height: 30px;
-}
-
-#piece-keys .pkey.active {
-    background-color: #BC8932;
-}
-
 h1 {
     font-size: 2.2em;
     margin: 8px 0;

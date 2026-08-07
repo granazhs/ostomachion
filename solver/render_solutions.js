@@ -2,7 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { simplifyPoly, ccw } = require("./pieces.js");
+const { simplifyPoly, ccw, PIECE_V } = require("./pieces.js");
 
 const GRID = 12;
 const COLORS = ["#E53935", "#D81B60", "#8E24AA", "#5E35B1", "#3949AB",
@@ -62,13 +62,95 @@ function polyPoints(vertices) {
     return vertices.map(([x, y]) => SX(x) + "," + SY(y)).join(" ");
 }
 
+function rot90(v) {
+    return [-v[1], v[0]];
+}
+
+function orientPoly(verts, rot, flip) {
+    let p = verts.map(v => v.slice());
+    for (let r = 0; r < rot; r++) p = p.map(rot90);
+    if (flip) p = p.map(v => [-v[0], v[1]]);
+    return p;
+}
+
+function pieceIsFlipped(piece, placed) {
+    const canon = PIECE_V[piece.charCodeAt(0) - 65];
+    for (let flip = 0; flip <= 1; flip++) {
+        for (let rot = 0; rot < 4; rot++) {
+            const p = orientPoly(canon, rot, flip);
+            const tx = placed[0][0] - p[0][0];
+            const ty = placed[0][1] - p[0][1];
+            let ok = true;
+            for (let i = 0; i < p.length; i++) {
+                if (p[i][0] + tx !== placed[i][0] || p[i][1] + ty !== placed[i][1]) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok) return flip === 1;
+        }
+    }
+    throw new Error("no orientation match for piece " + piece);
+}
+
+function pip(x, y, poly) {
+    let inside = false;
+    const n = poly.length;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+        const xi = poly[i][0], yi = poly[i][1];
+        const xj = poly[j][0], yj = poly[j][1];
+        if ((yj - yi) * (x - xi) === (xj - xi) * (y - yi) &&
+                x >= Math.min(xi, xj) && x <= Math.max(xi, xj) &&
+                y >= Math.min(yi, yj) && y <= Math.max(yi, yj))
+            return false;
+        if ((yi > y) !== (yj > y)) {
+            const xint = (xj - xi) * (y - yi) / (yj - yi) + xi;
+            if (x < xint) inside = !inside;
+        }
+    }
+    return inside;
+}
+
+function polyBBox(vertices) {
+    let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+    for (const [x, y] of vertices) {
+        if (x < minx) minx = x;
+        if (x > maxx) maxx = x;
+        if (y < miny) miny = y;
+        if (y > maxy) maxy = y;
+    }
+    return [minx, miny, maxx, maxy];
+}
+
+const DOT_R = 2.0;
+
+function dotMarkers(vertices) {
+    const bb = polyBBox(vertices);
+    const x0 = Math.max(0, Math.ceil(bb[0] - 0.5));
+    const x1 = Math.min(11, Math.floor(bb[2] - 0.5));
+    const y0 = Math.max(0, Math.ceil(bb[1] - 0.5));
+    const y1 = Math.min(11, Math.floor(bb[3] - 0.5));
+    const out = [];
+    for (let cx = x0; cx <= x1; cx++) {
+        for (let cy = y0; cy <= y1; cy++) {
+            const px = cx + 0.5, py = cy + 0.5;
+            if (pip(px, py, vertices)) out.push([px, py, DOT_R]);
+        }
+    }
+    return out;
+}
+
 function renderSVG(sol) {
     const g = [];
     g.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">`);
     g.push(`  <rect x="0" y="0" width="${W}" height="${W}" fill="${BG}"/>`);
     for (const { piece, vertices } of sol) {
         const idx = piece.charCodeAt(0) - 65;
-        g.push(`  <polygon points="${polyPoints(vertices)}" fill="${COLORS[idx]}" stroke="${PIECE_STROKE}" stroke-width="1" stroke-linejoin="round"/>`);
+        g.push(`  <polygon points="${polyPoints(vertices)}" fill="${COLORS[idx]}" data-piece="${piece}" data-color="${COLORS[idx]}" stroke="${PIECE_STROKE}" stroke-width="1" stroke-linejoin="round"/>`);
+        if (pieceIsFlipped(piece, vertices)) {
+            for (const [dx, dy, r] of dotMarkers(vertices))
+                g.push(`  <circle cx="${SX(dx)}" cy="${SY(dy)}" r="${r.toFixed(2)}" fill="#222"/>`);
+        }
     }
     for (let i = 1; i < GRID; i++) {
         const v = SX(i);
@@ -113,7 +195,12 @@ const html = `<!DOCTYPE html>
 <style>
     body { background:#f5f2ea; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; margin:0; padding:16px; }
     h1 { font-weight:300; color:#444; margin:4px 0 4px 4px; }
-    p.sub { color:#8a8070; margin:0 0 16px 4px; }
+    p.sub { color:#8a8070; margin:0 0 12px 4px; }
+    #pkeys { display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin:0 0 16px 4px; }
+    #pkeys button { border:none; cursor:pointer; width:30px; height:30px; font-size:15px;
+        background:#444; color:#fff; padding:0; line-height:30px; }
+    #pkeys button.wide { width:auto; padding:0 10px; }
+    #pkeys button.active { background:#BC8932; }
     .grid { display:flex; flex-wrap:wrap; gap:12px; }
     .cell { background:#fff; border:1px solid #d8d2c2; padding:8px; }
     .num { font-size:12px; color:#8a8070; text-align:center; padding-bottom:6px; }
@@ -122,10 +209,43 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion &mdash; ${unique.length} unlabeled solutions</h1>
-<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces D/E and J/K treated as interchangeable; mirrors and rotations merged.</p>
+<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces D/E and J/K treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click a letter to color only that piece in every tiling; click it again or \u201cAll\u201d to restore.</p>
+<div id="pkeys">
+    <button class="wide" data-pk="all">All</button>
+    <button data-pk="A">A</button><button data-pk="B">B</button><button data-pk="C">C</button>
+    <button data-pk="D">D</button><button data-pk="E">E</button><button data-pk="F">F</button>
+    <button data-pk="G">G</button><button data-pk="H">H</button><button data-pk="I">I</button>
+    <button data-pk="J">J</button><button data-pk="K">K</button><button data-pk="L">L</button>
+    <button data-pk="M">M</button><button data-pk="N">N</button>
+</div>
 <div class="grid">
 ${cells.join("\n")}
 </div>
+<script>
+    var btns = document.querySelectorAll("#pkeys button");
+    function setPieces(pk) {
+        var polys = document.querySelectorAll(".cell polygon");
+        for (var i = 0; i < polys.length; i++) {
+            polys[i].setAttribute("fill",
+                pk === "all" || polys[i].getAttribute("data-piece") === pk
+                    ? polys[i].getAttribute("data-color")
+                    : "rgba(0,0,0,0)");
+        }
+        for (var j = 0; j < btns.length; j++) {
+            btns[j].classList.toggle("active", btns[j].getAttribute("data-pk") === pk);
+        }
+    }
+    for (var k = 0; k < btns.length; k++) {
+        (function(btn) {
+            btn.addEventListener("click", function() {
+                var pk = btn.getAttribute("data-pk");
+                if (btn.classList.contains("active"))
+                    pk = "all";
+                setPieces(pk);
+            });
+        })(btns[k]);
+    }
+</script>
 </body>
 </html>
 `;
