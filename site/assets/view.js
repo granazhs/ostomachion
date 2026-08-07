@@ -73,7 +73,7 @@ function make_pieces() {
     for (var i = 0; i < PIECE_V.length; i++) {
         var v = PIECE_V[i];
         var c = area_centroid(v);
-        res.push({v: v, cx: c[0], cy: c[1], x: 0, y: 0, rot: 0, flip: 0, color: COLORS[i]});
+        res.push({v: v, cx: c[0], cy: c[1], x: 0, y: 0, rot: 0, flip: 0, color: COLORS[i], dots: shape_dots(v)});
     }
     return res;
 }
@@ -506,6 +506,31 @@ function draw_board() {
     }
 }
 
+function shape_dots(v) {
+    var dots = [];
+    var bb = bbox(v);
+    for (var i = Math.ceil(bb[0] - 0.5); i <= Math.floor(bb[2] - 0.5); i++) {
+        for (var j = Math.ceil(bb[1] - 0.5); j <= Math.floor(bb[3] - 0.5); j++) {
+            if (pip([i + 0.5, j + 0.5], v) === 1)
+                dots.push([i + 0.5 - v[0][0], j + 0.5 - v[0][1]]);
+        }
+    }
+    return dots;
+}
+
+function draw_dots(p) {
+    var o0 = rotflip_off(p, p.v[0][0] - p.cx, p.v[0][1] - p.cy);
+    var w0x = p.cx + o0[0] + p.x;
+    var w0y = p.cy + o0[1] + p.y;
+    ctx.fillStyle = "#222";
+    for (var k = 0; k < p.dots.length; k++) {
+        var o = rotflip_off(p, p.dots[k][0], p.dots[k][1]);
+        ctx.beginPath();
+        ctx.arc(BOARD_X + (w0x + o[0]) * SCALE, BOARD_Y + (w0y + o[1]) * SCALE, 3.2, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+}
+
 function draw_piece(p) {
     var ws = piece_vertices(p);
     ctx.beginPath();
@@ -529,6 +554,8 @@ function draw_piece(p) {
         ctx.strokeStyle = "#222";
     }
     ctx.stroke();
+    if (p.flip)
+        draw_dots(p);
 }
 
 function draw() {
