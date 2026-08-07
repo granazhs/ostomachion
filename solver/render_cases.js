@@ -171,10 +171,8 @@ for (const sol of data.solutions) {
 const rows = [...seenG.values()];
 console.log(`gallery rows (unlabeledKey): ${rows.length}`);
 
-// cut-lines left out of the game: CORNER-REGION DIAG (1/2) and 45° MIDPOINT DIAG
+// cut-lines left out of the game on cases.html: CORNER-REGION DIAG (1/2) and 45° MIDPOINT DIAG
 const REMOVED_CHORDS = new Set(["0,3;6,0", "0,6;6,0"]);
-const keptCuts = s => spanningCuts(s).filter(c => !REMOVED_CHORDS.has(c));
-const keptSegs = s => spanningSegs(s).filter(seg => !REMOVED_CHORDS.has(canonSegStr(seg.A, seg.B)));
 
 const samePt = (a, b) => a[0] === b[0] && a[1] === b[1];
 
@@ -203,34 +201,6 @@ function shapeDesc(segs) {
     return desc.sort();
 }
 
-const cutsOf = new Map();
-for (const s of rows) cutsOf.set(s, keptCuts(s));
-
-const rowKey = new Map();
-const groups = new Map();
-for (const s of rows) {
-    const cuts = cutsOf.get(s);
-    const shape = shapeDesc(keptSegs(s));
-    const key = cuts.join("|") + (shape.length ? " [" + shape.join("|") + "]" : "");
-    rowKey.set(s, key);
-    if (!groups.has(key)) groups.set(key, { n: 0, cuts, shape });
-    groups.get(key).n++;
-}
-const ordered = [...groups.entries()].sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-console.log(`cases over gallery rows: ${ordered.length} -> ${ordered.map(e => e[1].n).join(",")} (${rows.length} rows)`);
-
-const rowCase = rows.map(s => ordered.findIndex(e => e[0] === rowKey.get(s)) + 1);
-
-// actual cut segments of a single representative solution per case (first gallery
-// row): exactly the lines present in one real solution, so D8-symmetric
-// duplicates never appear together.
-const repRow = ordered.map(() => null);
-rows.forEach((s, r) => {
-    const c = rowCase[r];
-    if (repRow[c - 1] === null) repRow[c - 1] = s;
-});
-const caseSegs = repRow.map(s => keptSegs(s));
-
 const outDir = path.join(__dirname, "gallery");
 
 // diagram SVG for one case
@@ -256,43 +226,77 @@ function caseDiagram(segs) {
     return g.join("\n");
 }
 
-const blocks = [];
-ordered.forEach(([key, info], i) => {
-    const num = i + 1;
-    const segList = caseSegs[i];
-    const mult = {};
-    for (const c of info.cuts) {
-        const n = nameChord(c);
-        mult[n] = (mult[n] || 0) + 1;
+function buildPage({ removed, file, title, sub }) {
+    const keptCuts = s => spanningCuts(s).filter(c => !removed.has(c));
+    const keptSegs = s => spanningSegs(s).filter(seg => !removed.has(canonSegStr(seg.A, seg.B)));
+
+    const cutsOf = new Map();
+    for (const s of rows) cutsOf.set(s, keptCuts(s));
+
+    const rowKey = new Map();
+    const groups = new Map();
+    for (const s of rows) {
+        const cuts = cutsOf.get(s);
+        const shape = shapeDesc(keptSegs(s));
+        const key = cuts.join("|") + (shape.length ? " [" + shape.join("|") + "]" : "");
+        rowKey.set(s, key);
+        if (!groups.has(key)) groups.set(key, { n: 0, cuts, shape });
+        groups.get(key).n++;
     }
-    const tags = info.cuts.length === 0
-        ? `<span class="chordtag" style="background:#8a8070">NO FULL SPANNING CUT</span>`
-        : Object.entries(mult).map(([n, m]) =>
-            `<span class="chordtag" style="background:${chordColor(n)}">${n}${m > 1 ? " &times;" + m : ""}</span>`).join("");
-    const shapeTags = info.shape.map(sh => {
-        const [kind, cs] = sh.split(":");
-        return `<span class="chordtag" style="background:#6D4C41">${nameChord(cs)}: ${kind === "fan" ? "converging" : "parallel"}</span>`;
-    }).join("");
-    const shapeNotes = info.shape.map(sh => {
-        const [kind, cs] = sh.split(":");
-        const n = nameChord(cs);
-        return kind === "fan"
-            ? `The two ${n} diagonals share an endpoint (they converge at one point on the board edge).`
-            : `The two ${n} diagonals are parallel.`;
-    }).join(" ");
+    const ordered = [...groups.entries()].sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    console.log(`${file}: ${ordered.length} cases -> ${ordered.map(e => e[1].n).join(",")} (${rows.length} rows)`);
 
-    const rowNums = [];
-    rows.forEach((s, r) => { if (rowCase[r] === num) rowNums.push(r + 1); });
-    const pct = (info.n / rows.length * 100).toFixed(1);
-    const caseinfo = info.cuts.length === 0
-        ? "None of the kept cut-lines crosses the board from end to end here; the only full-spanning cuts these solutions had were corner-region or 45\u00b0 midpoint diagonals, which are left out of the game."
-        : "The board is crossed end-to-end by every full cut-line listed above; other internal joints stay short of the edges. " + shapeNotes + " The diagram draws the cut-lines of one representative solution of the case; mirror or rotated orientations of the same pattern occur in the other solutions shown below.";
-    const thumbs = rowNums.map(rn => {
-        const n = String(rn).padStart(4, "0");
-        return `<a class="th" href="solutions_unlabeled_${n}.svg" title="gallery solution ${rn} \u2014 click to open"><img loading="lazy" src="solutions_unlabeled_${n}.svg" alt="solution ${rn}"><div>${rn}</div></a>`;
-    }).join("\n");
+    const rowCase = rows.map(s => ordered.findIndex(e => e[0] === rowKey.get(s)) + 1);
 
-    blocks.push(`<div class="case">
+    // actual cut segments of a single representative solution per case (first gallery
+    // row): exactly the lines present in one real solution, so D8-symmetric
+    // duplicates never appear together.
+    const repRow = ordered.map(() => null);
+    rows.forEach((s, r) => {
+        const c = rowCase[r];
+        if (repRow[c - 1] === null) repRow[c - 1] = s;
+    });
+    const caseSegs = repRow.map(s => keptSegs(s));
+
+    const blocks = [];
+    ordered.forEach(([key, info], i) => {
+        const num = i + 1;
+        const segList = caseSegs[i];
+        const mult = {};
+        for (const c of info.cuts) {
+            const n = nameChord(c);
+            mult[n] = (mult[n] || 0) + 1;
+        }
+        const tags = info.cuts.length === 0
+            ? `<span class="chordtag" style="background:#8a8070">NO FULL SPANNING CUT</span>`
+            : Object.entries(mult).map(([n, m]) =>
+                `<span class="chordtag" style="background:${chordColor(n)}">${n}${m > 1 ? " &times;" + m : ""}</span>`).join("");
+        const shapeTags = info.shape.map(sh => {
+            const [kind, cs] = sh.split(":");
+            return `<span class="chordtag" style="background:#6D4C41">${nameChord(cs)}: ${kind === "fan" ? "converging" : "parallel"}</span>`;
+        }).join("");
+        const shapeNotes = info.shape.map(sh => {
+            const [kind, cs] = sh.split(":");
+            const n = nameChord(cs);
+            return kind === "fan"
+                ? `The two ${n} diagonals share an endpoint (they converge at one point on the board edge).`
+                : `The two ${n} diagonals are parallel.`;
+        }).join(" ");
+
+        const rowNums = [];
+        rows.forEach((s, r) => { if (rowCase[r] === num) rowNums.push(r + 1); });
+        const pct = (info.n / rows.length * 100).toFixed(1);
+        const caseinfo = info.cuts.length === 0
+            ? (removed.size
+                ? "None of the kept cut-lines crosses the board from end to end here; the only full-spanning cuts these solutions had were corner-region or 45\u00b0 midpoint diagonals, which are left out of the game."
+                : "No maximal cut-line crosses the board end-to-end here; every joint stays short of the board edges.")
+            : "The board is crossed end-to-end by every full cut-line listed above; other internal joints stay short of the edges. " + shapeNotes + " The diagram draws the cut-lines of one representative solution of the case; mirror or rotated orientations of the same pattern occur in the other solutions shown below.";
+        const thumbs = rowNums.map(rn => {
+            const n = String(rn).padStart(4, "0");
+            return `<a class="th" href="solutions_unlabeled_${n}.svg" title="gallery solution ${rn} \u2014 click to open"><img loading="lazy" src="solutions_unlabeled_${n}.svg" alt="solution ${rn}"><div>${rn}</div></a>`;
+        }).join("\n");
+
+        blocks.push(`<div class="case">
   <div class="casehead">
     <div class="diagram">${caseDiagram(segList)}</div>
     <div class="meta">
@@ -306,13 +310,13 @@ ordered.forEach(([key, info], i) => {
 ${thumbs}
   </div>
 </div>`);
-});
+    });
 
-const html = `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Ostomachion &mdash; spanning-cut cases (${ordered.length} cases)</title>
+<title>${title} (${ordered.length} cases)</title>
 <style>
     body { background:#f5f2ea; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; margin:0; padding:16px; }
     h1 { font-weight:300; color:#444; margin:4px 0 4px 4px; }
@@ -335,12 +339,27 @@ const html = `<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1>Ostomachion &mdash; spanning-cut cases</h1>
-<p class="sub">The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Corner-region and 45&deg; midpoint diagonals are left out of the game; solutions are re-grouped by the cut-lines that remain, so none is dropped. When the same diagonal appears twice, the case is split by whether the two run parallel or converge at one point on the board edge. ${ordered.length} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="flips.html">Flip table</a></p>
+<h1>${title}</h1>
+<p class="sub">${sub(ordered.length)}</p>
 ${blocks.join("\n")}
 <script src="labels.js"></script>
 </body>
 </html>
 `;
-fs.writeFileSync(path.join(outDir, "cases.html"), html);
-console.log(`wrote cases.html (${ordered.length} cases, ${blocks.join("").length} bytes of blocks) to ${outDir}`);
+    fs.writeFileSync(path.join(outDir, file), html);
+    console.log(`wrote ${file} (${ordered.length} cases, ${blocks.join("").length} bytes of blocks) to ${outDir}`);
+}
+
+buildPage({
+    removed: REMOVED_CHORDS,
+    file: "cases.html",
+    title: "Ostomachion &mdash; spanning-cut cases",
+    sub: n => `The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Corner-region and 45&deg; midpoint diagonals are left out of the game; solutions are re-grouped by the cut-lines that remain, so none is dropped. When the same diagonal appears twice, the case is split by whether the two run parallel or converge at one point on the board edge. ${n} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="cases_all.html">All diagonals</a> &middot; <a href="flips.html">Flip table</a>`
+});
+
+buildPage({
+    removed: new Set(),
+    file: "cases_all.html",
+    title: "Ostomachion &mdash; spanning-cut cases, all diagonals",
+    sub: n => `The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Every full spanning cut counts, including corner-region and 45&deg; midpoint diagonals. When the same diagonal appears twice, the case is split by whether the two run parallel or converge at one point on the board edge. ${n} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="cases.html">Restricted</a> &middot; <a href="flips.html">Flip table</a>`
+});
