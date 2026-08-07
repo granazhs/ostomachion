@@ -228,7 +228,7 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion &mdash; ${unique.length} unlabeled solutions</h1>
-<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces D/E and J/K treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click a letter to color only that piece in every tiling; click it again or \u201cAll\u201d to restore. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a></p>
+<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces D/E and J/K treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); click \u201cAll\u201d to restore. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a></p>
 <div id="pkeys">
     <button class="wide" data-pk="all">All</button>
     <button data-pk="A">A</button><button data-pk="B">B</button><button data-pk="C">C</button>
@@ -244,16 +244,21 @@ ${cells.join("\n")}
 <script>
     var btns = document.querySelectorAll("#pkeys button");
     var OCELL = 22, OMARGIN = 18;
-    function setPieces(pk) {
+    var activePieces = {};
+    function setPieces() {
+        var any = false;
+        for (var k in activePieces) if (activePieces[k]) { any = true; break; }
         var polys = document.querySelectorAll(".cell polygon");
         for (var i = 0; i < polys.length; i++) {
+            var piece = polys[i].getAttribute("data-piece");
             polys[i].setAttribute("fill",
-                pk === "all" || polys[i].getAttribute("data-piece") === pk
+                !any || activePieces[piece]
                     ? polys[i].getAttribute("data-color")
                     : "rgba(0,0,0,0)");
         }
         for (var j = 0; j < btns.length; j++) {
-            btns[j].classList.toggle("active", btns[j].getAttribute("data-pk") === pk);
+            var pk = btns[j].getAttribute("data-pk");
+            btns[j].classList.toggle("active", pk === "all" ? !any : !!activePieces[pk]);
         }
     }
     function collectOrientations(pk) {
@@ -320,7 +325,7 @@ ${cells.join("\n")}
     }
     function showOrientations(pk) {
         var box = document.getElementById("orientations");
-        if (pk === "all") {
+        if (pk === "all" || !activePieces[pk]) {
             box.innerHTML = "";
             box.style.display = "none";
             return;
@@ -349,9 +354,10 @@ ${cells.join("\n")}
         (function(btn) {
             btn.addEventListener("click", function() {
                 var pk = btn.getAttribute("data-pk");
-                if (btn.classList.contains("active"))
-                    pk = "all";
-                setPieces(pk);
+                if (pk === "all") activePieces = {};
+                else if (activePieces[pk]) delete activePieces[pk];
+                else activePieces[pk] = true;
+                setPieces();
                 showOrientations(pk);
             });
         })(btns[k]);
