@@ -228,7 +228,7 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion &mdash; ${unique.length} unlabeled solutions</h1>
-<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces D/E and J/K treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); click \u201cAll\u201d to restore. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a></p>
+<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces D/E and J/K treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); \u201cAll\u201d toggles between all and none. Piece orientations are shown while exactly one piece is selected. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a></p>
 <div id="pkeys">
     <button class="wide" data-pk="all">All</button>
     <button data-pk="A">A</button><button data-pk="B">B</button><button data-pk="C">C</button>
@@ -245,20 +245,18 @@ ${cells.join("\n")}
     var btns = document.querySelectorAll("#pkeys button");
     var OCELL = 22, OMARGIN = 18;
     var activePieces = {};
+    var mode = "all";
     function setPieces() {
-        var any = false;
-        for (var k in activePieces) if (activePieces[k]) { any = true; break; }
         var polys = document.querySelectorAll(".cell polygon");
         for (var i = 0; i < polys.length; i++) {
             var piece = polys[i].getAttribute("data-piece");
+            var show = mode === "all" || (mode === "subset" && activePieces[piece]);
             polys[i].setAttribute("fill",
-                !any || activePieces[piece]
-                    ? polys[i].getAttribute("data-color")
-                    : "rgba(0,0,0,0)");
+                show ? polys[i].getAttribute("data-color") : "rgba(0,0,0,0)");
         }
         for (var j = 0; j < btns.length; j++) {
             var pk = btns[j].getAttribute("data-pk");
-            btns[j].classList.toggle("active", pk === "all" ? !any : !!activePieces[pk]);
+            btns[j].classList.toggle("active", pk === "all" ? mode !== "all" : !!activePieces[pk]);
         }
     }
     function collectOrientations(pk) {
@@ -325,7 +323,9 @@ ${cells.join("\n")}
     }
     function showOrientations(pk) {
         var box = document.getElementById("orientations");
-        if (pk === "all" || !activePieces[pk]) {
+        var count = 0;
+        for (var k in activePieces) if (activePieces[k]) count++;
+        if (mode !== "subset" || count !== 1 || !activePieces[pk]) {
             box.innerHTML = "";
             box.style.display = "none";
             return;
@@ -354,9 +354,17 @@ ${cells.join("\n")}
         (function(btn) {
             btn.addEventListener("click", function() {
                 var pk = btn.getAttribute("data-pk");
-                if (pk === "all") activePieces = {};
-                else if (activePieces[pk]) delete activePieces[pk];
-                else activePieces[pk] = true;
+                if (pk === "all") {
+                    mode = mode === "all" ? "none" : "all";
+                    activePieces = {};
+                } else {
+                    if (mode !== "subset") activePieces = {};
+                    if (activePieces[pk]) delete activePieces[pk];
+                    else activePieces[pk] = true;
+                    var count = 0;
+                    for (var k in activePieces) if (activePieces[k]) count++;
+                    mode = count === 0 ? "all" : "subset";
+                }
                 setPieces();
                 showOrientations(pk);
             });
