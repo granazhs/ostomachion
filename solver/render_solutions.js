@@ -5,6 +5,7 @@ const path = require("path");
 const { simplifyPoly, ccw, PIECE_V } = require("./pieces.js");
 
 const GRID = 12;
+const LETTERS = "ABCDEFGHIJKLMN";
 const COLORS = ["#E53935", "#D81B60", "#8E24AA", "#5E35B1", "#3949AB",
                 "#1E88E5", "#00897B", "#43A047", "#C0CA33", "#F4511E",
                 "#FDD835", "#FB8C00", "#6D4C41", "#546E7A"];
@@ -140,14 +141,14 @@ function dotMarkers(vertices) {
     return out;
 }
 
-function renderSVG(sol) {
+function renderSVG(sol, flags) {
     const g = [];
     g.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">`);
     g.push(`  <rect x="0" y="0" width="${W}" height="${W}" fill="${BG}"/>`);
     for (const { piece, vertices } of sol) {
         const idx = piece.charCodeAt(0) - 65;
         g.push(`  <polygon points="${polyPoints(vertices)}" fill="${COLORS[idx]}" data-piece="${piece}" data-color="${COLORS[idx]}" stroke="${PIECE_STROKE}" stroke-width="1" stroke-linejoin="round"/>`);
-        if (pieceIsFlipped(piece, vertices)) {
+        if (flags[idx]) {
             for (const [dx, dy, r] of dotMarkers(vertices))
                 g.push(`  <circle cx="${SX(dx)}" cy="${SY(dy)}" r="${r.toFixed(2)}" fill="#222"/>`);
         }
@@ -176,12 +177,24 @@ if (unique.length !== data.unlabeledDistinct) {
     process.exit(1);
 }
 
+const flipBySol = new Map();
+const flipTotals = new Array(14).fill(0);
+for (const sol of unique) {
+    const flags = new Array(14).fill(false);
+    for (const { piece, vertices } of sol) {
+        const idx = piece.charCodeAt(0) - 65;
+        flags[idx] = pieceIsFlipped(piece, vertices);
+    }
+    flipBySol.set(sol, flags);
+    flags.forEach((f, j) => { if (f) flipTotals[j]++; });
+}
+
 const outDir = path.join(__dirname, "gallery");
 fs.mkdirSync(outDir, { recursive: true });
 
 const cells = [];
 unique.forEach((sol, i) => {
-    const svg = renderSVG(sol);
+    const svg = renderSVG(sol, flipBySol.get(sol));
     const n = String(i + 1).padStart(4, "0");
     fs.writeFileSync(path.join(outDir, `solutions_unlabeled_${n}.svg`), svg);
     cells.push(`<div class="cell"><div class="num">${i + 1} / ${unique.length}</div>${svg}</div>`);
@@ -209,7 +222,7 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion &mdash; ${unique.length} unlabeled solutions</h1>
-<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces D/E and J/K treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click a letter to color only that piece in every tiling; click it again or \u201cAll\u201d to restore.</p>
+<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces D/E and J/K treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click a letter to color only that piece in every tiling; click it again or \u201cAll\u201d to restore. <a href="flips.html">Flip table</a></p>
 <div id="pkeys">
     <button class="wide" data-pk="all">All</button>
     <button data-pk="A">A</button><button data-pk="B">B</button><button data-pk="C">C</button>
@@ -251,3 +264,153 @@ ${cells.join("\n")}
 `;
 fs.writeFileSync(path.join(outDir, "index.html"), html);
 console.log(`wrote ${unique.length} SVGs + index.html to ${outDir}`);
+
+function renderFlipTable() {
+    const totalFlips = flipTotals.reduce((a, b) => a + b, 0);
+    const headCells = ["<th class=\"thnum\">#</th><th class=\"thnum\">Flips</th>"];
+    for (let j = 0; j < 14; j++) {
+        headCells.push(`<th class="pcol" title="click to show only solutions where piece ${LETTERS[j]} is flipped">${LETTERS[j]}</th>`);
+    }
+    const rows = [];
+    unique.forEach((sol, i) => {
+        const flags = flipBySol.get(sol);
+        const nFlips = flags.reduce((a, b) => a + b, 0);
+        const n = String(i + 1).padStart(4, "0");
+        const cells = flags.map((f, j) =>
+            `<td class="fcell ${f ? "f" : "n"}"${f ? ` style="background:${COLORS[j]}"` : ""} title="piece ${LETTERS[j]} ${f ? "flipped" : "not flipped"}"></td>`).join("");
+        rows.push(`    <tr data-num="${i + 1}" data-flips="${nFlips}">
+      <td class="num"><a href="solutions_unlabeled_${n}.svg" class="sollink" title="solution ${i + 1} \u2014 click to preview, ctrl+click to open">${i + 1}</a><img class="prev" loading="lazy" src="solutions_unlabeled_${n}.svg" alt="solution ${i + 1}"></td>
+      <td class="num">${nFlips}</td>
+      ${cells}
+    </tr>`);
+    });
+    const footCells = [`<td class="num">\u03a3</td>`, `<td class="num">${totalFlips}</td>`];
+    for (let j = 0; j < 14; j++) {
+        footCells.push(`<td class="fcell tot" title="piece ${LETTERS[j]} flipped in ${flipTotals[j]} of ${unique.length} solutions">${flipTotals[j]}</td>`);
+    }
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Ostomachion &mdash; flip table (${unique.length} solutions)</title>
+<style>
+    body { background:#f5f2ea; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; margin:0; padding:16px; }
+    h1 { font-weight:300; color:#444; margin:4px 0 4px 4px; }
+    p.sub { color:#8a8070; margin:0 0 12px 4px; max-width:920px; }
+    a { color:#BC8932; }
+    #toolbar { margin:0 0 8px 4px; }
+    #toolbar button { border:1px solid #b9ad97; background:#fff; color:#444; cursor:pointer; padding:4px 10px; border-radius:3px; }
+    #toolbar span { color:#8a8070; font-size:13px; margin-left:10px; }
+    .tablewrap { overflow:auto; max-height:80vh; background:#fff; border:1px solid #d8d2c2; }
+    table { border-collapse:collapse; font-size:13px; }
+    thead th { position:sticky; top:0; z-index:2; background:#fff; border:1px solid #d8d2c2; padding:4px 2px; text-align:center; font-size:12px; color:#8a8070; }
+    thead th.pcol { cursor:pointer; }
+    thead th.pcol.active { background:#BC8932; color:#fff; }
+    thead th.thnum { cursor:pointer; }
+    thead th.sorted { background:#e7e0d0; color:#444; font-weight:bold; }
+    tbody td, tfoot td { border:1px solid #e2ddcf; padding:0; height:16px; }
+    td.fcell { width:24px; }
+    td.fcell.n { background:#fbfaf5; }
+    td.num { background:#f5f2ea; color:#8a8070; padding:2px 6px !important; width:44px; text-align:center; }
+    td.num a { text-decoration:none; color:#8a8070; display:inline-block; }
+    td.num.preview a { display:none; }
+    td.num img.prev { display:none; width:168px; height:168px; border:1px solid #d8d2c2; }
+    td.num.preview img.prev { display:block; }
+    tfoot td { font-size:12px; color:#8a8070; text-align:center; }
+    tfoot td.tot { background:#f5f2ea; }
+</style>
+</head>
+<body>
+<h1>Ostomachion &mdash; which pieces are mirror-flipped</h1>
+<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece A&ndash;N. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. Click a piece letter to show only rows where it is flipped; click &ldquo;Flips&rdquo; to sort by the number of flipped pieces; click a solution number to preview its tiling.</p>
+<div id="toolbar">
+    <button id="reset">Reset</button>
+    <span id="count"></span>
+</div>
+<div class="tablewrap">
+<table>
+<thead>
+  <tr>${headCells.join("")}</tr>
+</thead>
+<tbody>
+${rows.join("\n")}
+</tbody>
+<tfoot>
+  <tr>${footCells.join("")}</tr>
+</tfoot>
+</table>
+</div>
+<script>
+    (function() {
+        var tbody = document.querySelector("tbody");
+        var origRows = Array.prototype.slice.call(tbody.rows);
+        var ths = document.querySelectorAll("thead th");
+        var countEl = document.getElementById("count");
+        var resetBtn = document.getElementById("reset");
+        var state = { filter: null, sortKey: "num", asc: true };
+        function thIndex(th) {
+            var kids = th.parentNode.children;
+            for (var i = 0; i < kids.length; i++) if (kids[i] === th) return i;
+            return -1;
+        }
+        function apply() {
+            var rows = Array.prototype.slice.call(origRows);
+            if (state.sortKey === "flips") {
+                rows.sort(function(a, b) {
+                    var d = parseInt(a.getAttribute("data-flips"), 10) - parseInt(b.getAttribute("data-flips"), 10);
+                    return state.asc ? d : -d;
+                });
+            }
+            for (var i = 0; i < rows.length; i++) tbody.appendChild(rows[i]);
+            var vis = 0;
+            for (var j = 0; j < rows.length; j++) {
+                var r = rows[j];
+                var show = state.filter === null || r.children[state.filter + 2].classList.contains("f");
+                r.style.display = show ? "" : "none";
+                if (show) vis++;
+            }
+            countEl.textContent = vis + " of " + rows.length + " solutions";
+            for (var k = 0; k < ths.length; k++) {
+                ths[k].classList.toggle("active", state.filter !== null && k === state.filter + 2);
+                ths[k].classList.toggle("sorted", state.sortKey === "flips" && k === 1);
+            }
+        }
+        for (var m = 0; m < ths.length; m++) {
+            (function(th) {
+                th.addEventListener("click", function() {
+                    var i = thIndex(th);
+                    if (i === 1) {
+                        state.sortKey = "flips";
+                        state.asc = th.classList.contains("sorted") ? !state.asc : true;
+                    } else if (i >= 2) {
+                        var col = i - 2;
+                        state.filter = state.filter === col ? null : col;
+                    } else {
+                        state = { filter: null, sortKey: "num", asc: true };
+                    }
+                    apply();
+                });
+            })(ths[m]);
+        }
+        resetBtn.addEventListener("click", function() {
+            state = { filter: null, sortKey: "num", asc: true };
+            apply();
+        });
+        tbody.addEventListener("click", function(e) {
+            var el = e.target;
+            if (el && el.className === "sollink") {
+                e.preventDefault();
+                el.parentNode.classList.toggle("preview");
+            }
+        });
+        apply();
+    })();
+</script>
+</body>
+</html>
+`;
+    fs.writeFileSync(path.join(outDir, "flips.html"), html);
+    console.log(`wrote flips.html to ${outDir}`);
+}
+
+renderFlipTable();
