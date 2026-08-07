@@ -175,20 +175,50 @@ const REMOVED_CHORD = "0,3;6,0"; // CORNER-REGION DIAG (1/2) — left out of the
 const keptCuts = s => spanningCuts(s).filter(c => c !== REMOVED_CHORD);
 const keptSegs = s => spanningSegs(s).filter(seg => canonSegStr(seg.A, seg.B) !== REMOVED_CHORD);
 
+const samePt = (a, b) => a[0] === b[0] && a[1] === b[1];
+
+// For each chord type appearing twice or more: does any pair of its segments
+// share an endpoint (converging "fan") or run parallel? D8-invariant, so it
+// survives canonicalization.
+function shapeDesc(segs) {
+    const byType = new Map();
+    for (const s of segs) {
+        const k = canonSegStr(s.A, s.B);
+        if (!byType.has(k)) byType.set(k, []);
+        byType.get(k).push(s);
+    }
+    const desc = [];
+    for (const [k, list] of byType) {
+        if (list.length < 2) continue;
+        let share = false;
+        for (let i = 0; i < list.length && !share; i++) {
+            for (let j = i + 1; j < list.length; j++) {
+                const a = list[i], b = list[j];
+                if (samePt(a.A, b.A) || samePt(a.A, b.B) || samePt(a.B, b.A) || samePt(a.B, b.B)) share = true;
+            }
+        }
+        desc.push((share ? "fan:" : "parallel:") + k);
+    }
+    return desc.sort();
+}
+
 const cutsOf = new Map();
 for (const s of rows) cutsOf.set(s, keptCuts(s));
 
+const rowKey = new Map();
 const groups = new Map();
 for (const s of rows) {
     const cuts = cutsOf.get(s);
-    const key = cuts.join("|");
-    if (!groups.has(key)) groups.set(key, { n: 0, cuts });
+    const shape = shapeDesc(keptSegs(s));
+    const key = cuts.join("|") + (shape.length ? " [" + shape.join("|") + "]" : "");
+    rowKey.set(s, key);
+    if (!groups.has(key)) groups.set(key, { n: 0, cuts, shape });
     groups.get(key).n++;
 }
 const ordered = [...groups.entries()].sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
 console.log(`cases over gallery rows: ${ordered.length} -> ${ordered.map(e => e[1].n).join(",")} (${rows.length} rows)`);
 
-const rowCase = rows.map(s => ordered.findIndex(e => e[0] === cutsOf.get(s).join("|")) + 1);
+const rowCase = rows.map(s => ordered.findIndex(e => e[0] === rowKey.get(s)) + 1);
 
 // actual cut segments of a single representative solution per case (first gallery
 // row): exactly the lines present in one real solution, so D8-symmetric
@@ -238,13 +268,24 @@ ordered.forEach(([key, info], i) => {
         ? `<span class="chordtag" style="background:#8a8070">NO FULL SPANNING CUT</span>`
         : Object.entries(mult).map(([n, m]) =>
             `<span class="chordtag" style="background:${chordColor(n)}">${n}${m > 1 ? " &times;" + m : ""}</span>`).join("");
+    const shapeTags = info.shape.map(sh => {
+        const [kind, cs] = sh.split(":");
+        return `<span class="chordtag" style="background:#6D4C41">${nameChord(cs)}: ${kind === "fan" ? "converging" : "parallel"}</span>`;
+    }).join("");
+    const shapeNotes = info.shape.map(sh => {
+        const [kind, cs] = sh.split(":");
+        const n = nameChord(cs);
+        return kind === "fan"
+            ? `The two ${n} diagonals share an endpoint (they converge at one point on the board edge).`
+            : `The two ${n} diagonals are parallel.`;
+    }).join(" ");
 
     const rowNums = [];
     rows.forEach((s, r) => { if (rowCase[r] === num) rowNums.push(r + 1); });
     const pct = (info.n / rows.length * 100).toFixed(1);
     const caseinfo = info.cuts.length === 0
         ? "None of the kept cut-lines crosses the board from end to end here; the only full-spanning cut these solutions had was a corner-region diagonal, which is left out of the game."
-        : "The board is crossed end-to-end by every full cut-line listed above; other internal joints stay short of the edges. The diagram draws the cut-lines of one representative solution of the case; mirror or rotated orientations of the same pattern occur in the other solutions shown below.";
+        : "The board is crossed end-to-end by every full cut-line listed above; other internal joints stay short of the edges. " + shapeNotes + " The diagram draws the cut-lines of one representative solution of the case; mirror or rotated orientations of the same pattern occur in the other solutions shown below.";
     const thumbs = rowNums.map(rn => {
         const n = String(rn).padStart(4, "0");
         return `<a class="th" href="solutions_unlabeled_${n}.svg" title="gallery solution ${rn} \u2014 click to open"><img loading="lazy" src="solutions_unlabeled_${n}.svg" alt="solution ${rn}"><div>${rn}</div></a>`;
@@ -256,7 +297,7 @@ ordered.forEach(([key, info], i) => {
     <div class="meta">
       <div class="caseno">Case ${num}</div>
       <div class="casestats">${info.n} of ${rows.length} solutions (${pct}%)</div>
-      <div class="casechords">${tags}</div>
+      <div class="casechords">${tags}${shapeTags}</div>
       <div class="caseinfo">${caseinfo}</div>
     </div>
   </div>
@@ -294,7 +335,7 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion &mdash; spanning-cut cases</h1>
-<p class="sub">The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Corner-region diagonals are left out of the game; solutions are re-grouped by the cut-lines that remain, so none is dropped. ${ordered.length} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="flips.html">Flip table</a></p>
+<p class="sub">The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Corner-region diagonals are left out of the game; solutions are re-grouped by the cut-lines that remain, so none is dropped. When the same diagonal appears twice, the case is split by whether the two run parallel or converge at one point on the board edge. ${ordered.length} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="flips.html">Flip table</a></p>
 ${blocks.join("\n")}
 </body>
 </html>
