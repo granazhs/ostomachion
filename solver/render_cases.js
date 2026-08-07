@@ -338,6 +338,7 @@ const html = `<!DOCTYPE html>
 <h1>Ostomachion &mdash; spanning-cut cases</h1>
 <p class="sub">The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Corner-region and 45&deg; midpoint diagonals are left out of the game; solutions are re-grouped by the cut-lines that remain, so none is dropped. When the same diagonal appears twice, the case is split by whether the two run parallel or converge at one point on the board edge. ${ordered.length} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="flips.html">Flip table</a></p>
 ${blocks.join("\n")}
+<script src="labels.js"></script>
 </body>
 </html>
 `;

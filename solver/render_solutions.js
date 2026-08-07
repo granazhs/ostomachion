@@ -141,17 +141,44 @@ function dotMarkers(vertices) {
     return out;
 }
 
-function renderSVG(sol, flags) {
+function labelPoint(vertices) {
+    const n = vertices.length;
+    let A = 0, cx = 0, cy = 0;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+        const xi = vertices[i][0], yi = vertices[i][1];
+        const xj = vertices[j][0], yj = vertices[j][1];
+        const cross = xi * yj - xj * yi;
+        A += cross;
+        cx += (xi + xj) * cross;
+        cy += (yi + yj) * cross;
+    }
+    cx /= 3 * A;
+    cy /= 3 * A;
+    let best = null, bestD = Infinity;
+    for (const [px, py] of dotMarkers(vertices)) {
+        const d = (px - cx) * (px - cx) + (py - cy) * (py - cy);
+        if (d < bestD) { bestD = d; best = [px, py]; }
+    }
+    return best || [cx, cy];
+}
+
+const LABEL_STYLE = "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:20px;font-weight:bold;text-anchor:middle;dominant-baseline:central;fill:#fff;stroke:#222;stroke-width:3px;paint-order:stroke;";
+
+function renderSVG(sol, flags, labeled) {
     const g = [];
-    g.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">`);
+    const labels = [];
+    g.push(`<svg xmlns="http://www.w3.org/2000/svg" data-board="1" data-m="${M}" data-cell="${CELL}" width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">`);
     g.push(`  <rect x="0" y="0" width="${W}" height="${W}" fill="${BG}"/>`);
     for (const { piece, vertices } of sol) {
         const idx = piece.charCodeAt(0) - 65;
-        g.push(`  <polygon points="${polyPoints(vertices)}" fill="${COLORS[idx]}" data-piece="${piece}" data-color="${COLORS[idx]}" stroke="${PIECE_STROKE}" stroke-width="1" stroke-linejoin="round"/>`);
+        const [lx, ly] = labelPoint(vertices);
+        g.push(`  <polygon points="${polyPoints(vertices)}" fill="${COLORS[idx]}" data-piece="${piece}" data-color="${COLORS[idx]}" data-lx="${lx.toFixed(2)}" data-ly="${ly.toFixed(2)}" stroke="${PIECE_STROKE}" stroke-width="1" stroke-linejoin="round"/>`);
         if (flags[idx]) {
             for (const [dx, dy, r] of dotMarkers(vertices))
                 g.push(`  <circle cx="${SX(dx)}" cy="${SY(dy)}" r="${r.toFixed(2)}" fill="#222"/>`);
         }
+        if (labeled)
+            labels.push(`  <text x="${SX(lx)}" y="${SY(ly)}" style="${LABEL_STYLE}" data-label="1">${piece}</text>`);
     }
     for (let i = 1; i < GRID; i++) {
         const v = SX(i);
@@ -159,6 +186,7 @@ function renderSVG(sol, flags) {
         g.push(`  <line x1="${SX(0)}" y1="${v}" x2="${SX(GRID)}" y2="${v}" stroke="${GRID_LINE}" stroke-width="1"/>`);
     }
     g.push(`  <rect x="${SX(0)}" y="${SX(0)}" width="${CELL * GRID}" height="${CELL * GRID}" fill="none" stroke="${BOARD_LINE}" stroke-width="1.5"/>`);
+    g.push(labels.join("\n"));
     g.push(`</svg>`);
     return g.join("\n");
 }
@@ -194,10 +222,11 @@ fs.mkdirSync(outDir, { recursive: true });
 
 const cells = [];
 unique.forEach((sol, i) => {
-    const svg = renderSVG(sol, flipBySol.get(sol));
+    const flags = flipBySol.get(sol);
     const n = String(i + 1).padStart(4, "0");
-    fs.writeFileSync(path.join(outDir, `solutions_unlabeled_${n}.svg`), svg);
-    cells.push(`<div class="cell"><div class="num">${i + 1} / ${unique.length}</div>${svg}</div>`);
+    fs.writeFileSync(path.join(outDir, `solutions_unlabeled_${n}.svg`), renderSVG(sol, flags));
+    fs.writeFileSync(path.join(outDir, `solutions_labeled_${n}.svg`), renderSVG(sol, flags, true));
+    cells.push(`<div class="cell"><div class="num">${i + 1} / ${unique.length}</div>${renderSVG(sol, flags)}</div>`);
 });
 
 const html = `<!DOCTYPE html>
@@ -372,6 +401,7 @@ ${cells.join("\n")}
     }
     setPieces();
 </script>
+<script src="labels.js"></script>
 </body>
 </html>
 `;
@@ -605,6 +635,7 @@ ${rows2.join("\n")}
         apply();
     })();
 </script>
+<script src="labels.js"></script>
 </body>
 </html>
 `;
