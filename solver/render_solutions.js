@@ -306,20 +306,18 @@ function renderFlipTable() {
     const dupGroups = [...groups.values()].filter(g => g.length > 1);
     const shared = dupGroups.reduce((a, g) => a + g.length, 0);
 
-    const headCells2 = ["<th class=\"thnum\">#</th><th class=\"thnum\" title=\"number in the gallery (click a number to preview)\">gallery</th><th class=\"thnum\" title=\"how many solutions share this flip pattern\">dup</th><th class=\"thnum\">Flips</th>"];
+    const headCells2 = ["<th class=\"thnum\" title=\"number in the gallery (click a number to preview)\">#</th><th class=\"thnum\" title=\"how many solutions share this flip pattern\">dup</th><th class=\"thnum\">Flips</th>"];
     for (let j = 0; j < 14; j++) {
         headCells2.push(`<th class="pcol" title="piece ${LETTERS[j]}">${LETTERS[j]}</th>`);
     }
     const rows2 = [];
-    let newNum = 0;
     const bits = (sig) => Array.from({ length: 14 }, (_, j) => ((sig >> j) & 1) ? "1" : "0").join("");
     const sortedGroups = [...groups.entries()].sort((a, b) => b[1].length - a[1].length || a[0] - b[0]);
     for (const [sig, members] of sortedGroups) {
         if (rows2.length > 0) {
-            rows2.push(`    <tr class="gsep"><td colspan="18" title="signature ${bits(sig)} \u2014 same flip pattern as gallery solutions ${members.join(", ")}"><span class="gseplabel">${members.length} solution${members.length > 1 ? "s" : ""} &middot; ${bits(sig)}</span></td></tr>`);
+            rows2.push(`    <tr class="gsep"><td colspan="17" title="signature ${bits(sig)} \u2014 same flip pattern as gallery solutions ${members.join(", ")}"><span class="gseplabel">${members.length} solution${members.length > 1 ? "s" : ""} &middot; ${bits(sig)}</span></td></tr>`);
         }
         for (const orig of members) {
-            newNum++;
             const flags = flipBySol.get(unique[orig - 1]);
             const nFlips = flags.reduce((a, b) => a + b, 0);
             const n = String(orig).padStart(4, "0");
@@ -330,7 +328,6 @@ function renderFlipTable() {
                 ? `<td class="g" title="same flip pattern as gallery solutions ${members.join(", ")}">&times;${members.length}</td>`
                 : `<td class="g"></td>`;
             rows2.push(`    <tr class="${dup ? "dup" : ""}" data-flips="${nFlips}">
-      <td class="num">${newNum}</td>
       <td class="num"><a href="solutions_unlabeled_${n}.svg" class="sollink" title="gallery solution ${orig} \u2014 click to preview, ctrl+click to open">${orig}</a><img class="prev" loading="lazy" src="solutions_unlabeled_${n}.svg" alt="gallery solution ${orig}"></td>
       ${gCell}
       <td class="num">${nFlips}</td>
@@ -338,7 +335,7 @@ function renderFlipTable() {
     </tr>`);
         }
     }
-    const footCells2 = [`<td class="num">\u03a3</td>`, `<td class="num">${unique.length}</td>`, `<td class="num" title="${distinct} distinct flip patterns, ${dupGroups.length} of them shared">${distinct}</td>`, `<td class="num">${totalFlips}</td>`];
+    const footCells2 = [`<td class="num">${unique.length}</td>`, `<td class="num" title="${distinct} distinct flip patterns, ${dupGroups.length} of them shared">${distinct}</td>`, `<td class="num">${totalFlips}</td>`];
     for (let j = 0; j < 14; j++) {
         footCells2.push(`<td class="fcell tot" title="piece ${LETTERS[j]} flipped in ${flipTotals[j]} of ${unique.length} solutions">${flipTotals[j]}</td>`);
     }
@@ -387,7 +384,7 @@ function renderFlipTable() {
 </head>
 <body>
 <h1>Ostomachion &mdash; which pieces are mirror-flipped</h1>
-<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece A&ndash;N. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions grouped by flip pattern, most common patterns first, renumbered 1&ndash;${unique.length}; a horizontal line separates each pattern. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows.</p>
+<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece A&ndash;N. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions grouped by flip pattern, most common patterns first; a horizontal line separates each pattern. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows.</p>
 <div class="tables">
 <div class="tcol">
 <h2>Gallery order</h2>
