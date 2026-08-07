@@ -312,8 +312,12 @@ function renderFlipTable() {
     }
     const rows2 = [];
     let newNum = 0;
-    const sortedGroups = [...groups.entries()].sort((a, b) => a[0] - b[0] || a[1][0] - b[1][0]);
-    for (const [, members] of sortedGroups) {
+    const bits = (sig) => Array.from({ length: 14 }, (_, j) => ((sig >> j) & 1) ? "1" : "0").join("");
+    const sortedGroups = [...groups.entries()].sort((a, b) => b[1].length - a[1].length || a[0] - b[0]);
+    for (const [sig, members] of sortedGroups) {
+        if (rows2.length > 0) {
+            rows2.push(`    <tr class="gsep"><td colspan="18" title="signature ${bits(sig)} \u2014 same flip pattern as gallery solutions ${members.join(", ")}"><span class="gseplabel">${members.length} solution${members.length > 1 ? "s" : ""} &middot; ${bits(sig)}</span></td></tr>`);
+        }
         for (const orig of members) {
             newNum++;
             const flags = flipBySol.get(unique[orig - 1]);
@@ -375,13 +379,15 @@ function renderFlipTable() {
     tr.dup td.n { background:#fdecea; }
     tr.dup td.g { background:#f9dcdc; }
     tr.dup td.num { background:#f7e8e6; }
+    tr.gsep td { border-top:2px solid #a89e8a; border-bottom:1px solid #e2ddcf; background:#faf8f2; padding:1px 0; }
+    tr.gsep .gseplabel { display:block; text-align:center; color:#8a8070; font-size:11px; letter-spacing:1px; }
     tfoot td { font-size:12px; color:#8a8070; text-align:center; }
     tfoot td.tot { background:#f5f2ea; }
 </style>
 </head>
 <body>
 <h1>Ostomachion &mdash; which pieces are mirror-flipped</h1>
-<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece A&ndash;N. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions sorted by flip pattern and renumbered 1&ndash;${unique.length}, so equal patterns sit in adjacent rows. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows.</p>
+<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece A&ndash;N. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions grouped by flip pattern, most common patterns first, renumbered 1&ndash;${unique.length}; a horizontal line separates each pattern. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows.</p>
 <div class="tables">
 <div class="tcol">
 <h2>Gallery order</h2>
