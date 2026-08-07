@@ -267,6 +267,7 @@ console.log(`wrote ${unique.length} SVGs + index.html to ${outDir}`);
 
 function renderFlipTable() {
     const totalFlips = flipTotals.reduce((a, b) => a + b, 0);
+
     const headCells = ["<th class=\"thnum\">#</th><th class=\"thnum\">Flips</th>"];
     for (let j = 0; j < 14; j++) {
         headCells.push(`<th class="pcol" title="click to show only solutions where piece ${LETTERS[j]} is flipped">${LETTERS[j]}</th>`);
@@ -288,6 +289,56 @@ function renderFlipTable() {
     for (let j = 0; j < 14; j++) {
         footCells.push(`<td class="fcell tot" title="piece ${LETTERS[j]} flipped in ${flipTotals[j]} of ${unique.length} solutions">${flipTotals[j]}</td>`);
     }
+
+    const sigOf = (sol) => {
+        const flags = flipBySol.get(sol);
+        let s = 0;
+        for (let j = 0; j < 14; j++) if (flags[j]) s |= (1 << j);
+        return s;
+    };
+    const groups = new Map();
+    unique.forEach((sol, i) => {
+        const s = sigOf(sol);
+        if (!groups.has(s)) groups.set(s, []);
+        groups.get(s).push(i + 1);
+    });
+    const distinct = groups.size;
+    const dupGroups = [...groups.values()].filter(g => g.length > 1);
+    const shared = dupGroups.reduce((a, g) => a + g.length, 0);
+
+    const headCells2 = ["<th class=\"thnum\">#</th><th class=\"thnum\" title=\"number in the gallery (click a number to preview)\">gallery</th><th class=\"thnum\" title=\"how many solutions share this flip pattern\">dup</th><th class=\"thnum\">Flips</th>"];
+    for (let j = 0; j < 14; j++) {
+        headCells2.push(`<th class="pcol" title="piece ${LETTERS[j]}">${LETTERS[j]}</th>`);
+    }
+    const rows2 = [];
+    let newNum = 0;
+    const sortedGroups = [...groups.entries()].sort((a, b) => a[0] - b[0] || a[1][0] - b[1][0]);
+    for (const [, members] of sortedGroups) {
+        for (const orig of members) {
+            newNum++;
+            const flags = flipBySol.get(unique[orig - 1]);
+            const nFlips = flags.reduce((a, b) => a + b, 0);
+            const n = String(orig).padStart(4, "0");
+            const cells = flags.map((f, j) =>
+                `<td class="fcell ${f ? "f" : "n"}"${f ? ` style="background:${COLORS[j]}"` : ""} title="piece ${LETTERS[j]} ${f ? "flipped" : "not flipped"}"></td>`).join("");
+            const dup = members.length > 1;
+            const gCell = dup
+                ? `<td class="g" title="same flip pattern as gallery solutions ${members.join(", ")}">&times;${members.length}</td>`
+                : `<td class="g"></td>`;
+            rows2.push(`    <tr class="${dup ? "dup" : ""}" data-flips="${nFlips}">
+      <td class="num">${newNum}</td>
+      <td class="num"><a href="solutions_unlabeled_${n}.svg" class="sollink" title="gallery solution ${orig} \u2014 click to preview, ctrl+click to open">${orig}</a><img class="prev" loading="lazy" src="solutions_unlabeled_${n}.svg" alt="gallery solution ${orig}"></td>
+      ${gCell}
+      <td class="num">${nFlips}</td>
+      ${cells}
+    </tr>`);
+        }
+    }
+    const footCells2 = [`<td class="num">\u03a3</td>`, `<td class="num">${unique.length}</td>`, `<td class="num" title="${distinct} distinct flip patterns, ${dupGroups.length} of them shared">${distinct}</td>`, `<td class="num">${totalFlips}</td>`];
+    for (let j = 0; j < 14; j++) {
+        footCells2.push(`<td class="fcell tot" title="piece ${LETTERS[j]} flipped in ${flipTotals[j]} of ${unique.length} solutions">${flipTotals[j]}</td>`);
+    }
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -296,15 +347,19 @@ function renderFlipTable() {
 <style>
     body { background:#f5f2ea; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; margin:0; padding:16px; }
     h1 { font-weight:300; color:#444; margin:4px 0 4px 4px; }
-    p.sub { color:#8a8070; margin:0 0 12px 4px; max-width:920px; }
+    p.sub { color:#8a8070; margin:0 0 12px 4px; max-width:980px; }
     a { color:#BC8932; }
+    h2 { font-weight:300; color:#444; font-size:17px; margin:0 0 6px 4px; }
     #toolbar { margin:0 0 8px 4px; }
     #toolbar button { border:1px solid #b9ad97; background:#fff; color:#444; cursor:pointer; padding:4px 10px; border-radius:3px; }
     #toolbar span { color:#8a8070; font-size:13px; margin-left:10px; }
+    .tables { display:flex; gap:20px; align-items:flex-start; overflow-x:auto; padding-bottom:8px; }
+    .tcol { flex:1 1 0; min-width:0; }
     .tablewrap { overflow:auto; max-height:80vh; background:#fff; border:1px solid #d8d2c2; }
     table { border-collapse:collapse; font-size:13px; }
     thead th { position:sticky; top:0; z-index:2; background:#fff; border:1px solid #d8d2c2; padding:4px 2px; text-align:center; font-size:12px; color:#8a8070; }
     thead th.pcol { cursor:pointer; }
+    #tab2 thead th { cursor:default; }
     thead th.pcol.active { background:#BC8932; color:#fff; }
     thead th.thnum { cursor:pointer; }
     thead th.sorted { background:#e7e0d0; color:#444; font-weight:bold; }
@@ -316,19 +371,26 @@ function renderFlipTable() {
     td.num.preview a { display:none; }
     td.num img.prev { display:none; width:168px; height:168px; border:1px solid #d8d2c2; }
     td.num.preview img.prev { display:block; }
+    td.g { width:34px; background:#f5f2ea; color:#b03a2e; font-size:11px; text-align:center; }
+    tr.dup td.n { background:#fdecea; }
+    tr.dup td.g { background:#f9dcdc; }
+    tr.dup td.num { background:#f7e8e6; }
     tfoot td { font-size:12px; color:#8a8070; text-align:center; }
     tfoot td.tot { background:#f5f2ea; }
 </style>
 </head>
 <body>
 <h1>Ostomachion &mdash; which pieces are mirror-flipped</h1>
-<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece A&ndash;N. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. Click a piece letter to show only rows where it is flipped; click &ldquo;Flips&rdquo; to sort by the number of flipped pieces; click a solution number to preview its tiling.</p>
+<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece A&ndash;N. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions sorted by flip pattern and renumbered 1&ndash;${unique.length}, so equal patterns sit in adjacent rows. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows.</p>
+<div class="tables">
+<div class="tcol">
+<h2>Gallery order</h2>
 <div id="toolbar">
     <button id="reset">Reset</button>
     <span id="count"></span>
 </div>
 <div class="tablewrap">
-<table>
+<table id="tab1">
 <thead>
   <tr>${headCells.join("")}</tr>
 </thead>
@@ -340,11 +402,32 @@ ${rows.join("\n")}
 </tfoot>
 </table>
 </div>
+</div>
+<div class="tcol">
+<h2>Sorted by flip pattern</h2>
+<div id="toolbar">
+    <span>${distinct} distinct patterns &middot; ${dupGroups.length} shared</span>
+</div>
+<div class="tablewrap">
+<table id="tab2">
+<thead>
+  <tr>${headCells2.join("")}</tr>
+</thead>
+<tbody>
+${rows2.join("\n")}
+</tbody>
+<tfoot>
+  <tr>${footCells2.join("")}</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
 <script>
     (function() {
-        var tbody = document.querySelector("tbody");
+        var tbody = document.querySelector("#tab1 tbody");
         var origRows = Array.prototype.slice.call(tbody.rows);
-        var ths = document.querySelectorAll("thead th");
+        var ths = document.querySelectorAll("#tab1 thead th");
         var countEl = document.getElementById("count");
         var resetBtn = document.getElementById("reset");
         var state = { filter: null, sortKey: "num", asc: true };
@@ -396,7 +479,7 @@ ${rows.join("\n")}
             state = { filter: null, sortKey: "num", asc: true };
             apply();
         });
-        tbody.addEventListener("click", function(e) {
+        document.addEventListener("click", function(e) {
             var el = e.target;
             if (el && el.className === "sollink") {
                 e.preventDefault();
