@@ -1,7 +1,7 @@
 "use strict";
 
 const CONFIGS = require("../site/assets/pieces.js");
-const ACTIVE_CONFIG = "classic";
+const ACTIVE_CONFIG = process.env.OSTOMACHION_CONFIG || "classic";
 const { names: PIECE_NAMES, pieces: PIECE_V } = CONFIGS[ACTIVE_CONFIG];
 
 function signedArea(poly) {
@@ -92,15 +92,23 @@ function gcd(a, b) {
 }
 
 function canonShapeKey(poly) {
+    const features = verts => {
+        const n = verts.length;
+        const lens = edges(verts).map(edgeLen);
+        const turns = [];
+        for (let i = 0; i < n; i++) {
+            const v0 = verts[(i + n - 1) % n], v1 = verts[i], v2 = verts[(i + 1) % n];
+            const ax = v1[0] - v0[0], ay = v1[1] - v0[1];
+            const bx = v2[0] - v1[0], by = v2[1] - v1[1];
+            turns.push(Math.atan2(ax * by - ay * bx, ax * bx + ay * by) * 180 / Math.PI);
+        }
+        return lens.map((l, i) => [+l.toFixed(6), +turns[i].toFixed(6)]);
+    };
     const p = ccw(simplifyPoly(poly));
-    const n = p.length;
-    const lens = edges(p).map(edgeLen);
-    const ints = interiorAngles(p);
-    const feats = [];
-    for (let i = 0; i < n; i++) feats.push([+ints[i].toFixed(6), +lens[i].toFixed(6)]);
+    const mirror = verts => ccw(verts.map(([x, y]) => [x, -y]));
     const cands = [];
-    for (const seq of [feats, feats.slice().reverse()]) {
-        for (let s = 0; s < n; s++) {
+    for (const seq of [features(p), features(mirror(p))]) {
+        for (let s = 0; s < seq.length; s++) {
             cands.push(JSON.stringify([...seq.slice(s), ...seq.slice(0, s)]));
         }
     }

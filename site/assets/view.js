@@ -15,9 +15,13 @@ const COLORS = ["#E53935", "#D81B60", "#8E24AA", "#5E35B1", "#3949AB",
                 "#1E88E5", "#00897B", "#43A047", "#C0CA33", "#F4511E",
                 "#FDD835", "#FB8C00", "#6D4C41", "#546E7A"];
 
+var CONFIG_NAME = (typeof OSTOMACHION_CONFIG !== "undefined")
+    ? OSTOMACHION_CONFIG
+    : "classic";
+
 var PIECE_V = (typeof OSTOMACHION_PIECES !== "undefined")
-    ? OSTOMACHION_PIECES["classic"].pieces
-    : require("./pieces.js")["classic"].pieces;
+    ? OSTOMACHION_PIECES[CONFIG_NAME].pieces
+    : require("./pieces.js")[CONFIG_NAME].pieces;
 
 var pieces;
 var active;

@@ -192,7 +192,8 @@ function renderSVG(sol, flags, labeled) {
     return g.join("\n");
 }
 
-const data = JSON.parse(fs.readFileSync(path.join(__dirname, "solutions.json"), "utf8"));
+const CONFIG = process.env.OSTOMACHION_CONFIG || "classic";
+const data = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG === "classic" ? "solutions.json" : `solutions_${CONFIG}.json`), "utf8"));
 
 const seen = new Map();
 for (const sol of data.solutions) {
@@ -206,10 +207,11 @@ if (unique.length !== data.unlabeledDistinct) {
     process.exit(1);
 }
 
+const N = PIECE_NAMES.length;
 const flipBySol = new Map();
-const flipTotals = new Array(14).fill(0);
+const flipTotals = new Array(N).fill(0);
 for (const sol of unique) {
-    const flags = new Array(14).fill(false);
+    const flags = new Array(N).fill(false);
     for (const { piece, vertices } of sol) {
         const idx = NAME_IDX.get(piece);
         flags[idx] = pieceIsFlipped(piece, vertices);
@@ -218,7 +220,7 @@ for (const sol of unique) {
     flags.forEach((f, j) => { if (f) flipTotals[j]++; });
 }
 
-const outDir = path.join(__dirname, "gallery");
+const outDir = path.join(__dirname, CONFIG === "classic" ? "gallery" : `gallery_${CONFIG}`);
 fs.mkdirSync(outDir, { recursive: true });
 
 const cells = [];
@@ -230,11 +232,13 @@ unique.forEach((sol, i) => {
     cells.push(`<div class="cell"><div class="num">${i + 1} / ${unique.length}</div>${renderSVG(sol, flags)}</div>`);
 });
 
+const CONFIG_SUFFIX = CONFIG === "classic" ? "" : ` &mdash; ${CONFIG} (${N}-piece) game`;
+
 const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Ostomachion &mdash; ${unique.length} unlabeled solutions</title>
+<title>Ostomachion${CONFIG_SUFFIX} &mdash; ${unique.length} unlabeled solutions</title>
 <style>
     body { background:#f5f2ea; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; margin:0; padding:16px; }
     h1 { font-weight:300; color:#444; margin:4px 0 4px 4px; }
@@ -257,7 +261,7 @@ const html = `<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1>Ostomachion &mdash; ${unique.length} unlabeled solutions</h1>
+<h1>Ostomachion${CONFIG_SUFFIX} &mdash; ${unique.length} unlabeled solutions</h1>
 <p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces ${congruentPairs().map(([a, b]) => `${PIECE_NAMES[a]}/${PIECE_NAMES[b]}`).join(" and ")} treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); \u201cAll\u201d toggles between all and none. Piece orientations are shown while exactly one piece is selected. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
 <div id="pkeys">
     <button class="wide" data-pk="all">All</button>
@@ -409,7 +413,7 @@ function renderFlipTable() {
     const totalFlips = flipTotals.reduce((a, b) => a + b, 0);
 
     const headCells = ["<th class=\"thnum\">#</th><th class=\"thnum\">Flips</th>"];
-    for (let j = 0; j < 14; j++) {
+    for (let j = 0; j < N; j++) {
         headCells.push(`<th class="pcol" title="click to show only solutions where piece ${LETTERS[j]} is flipped">${LETTERS[j]}</th>`);
     }
     const rows = [];
@@ -426,14 +430,14 @@ function renderFlipTable() {
     </tr>`);
     });
     const footCells = [`<td class="num">\u03a3</td>`, `<td class="num">${totalFlips}</td>`];
-    for (let j = 0; j < 14; j++) {
+    for (let j = 0; j < N; j++) {
         footCells.push(`<td class="fcell tot" title="piece ${LETTERS[j]} flipped in ${flipTotals[j]} of ${unique.length} solutions">${flipTotals[j]}</td>`);
     }
 
     const sigOf = (sol) => {
         const flags = flipBySol.get(sol);
         let s = 0;
-        for (let j = 0; j < 14; j++) if (flags[j]) s |= (1 << j);
+        for (let j = 0; j < N; j++) if (flags[j]) s |= (1 << j);
         return s;
     };
     const groups = new Map();
@@ -447,15 +451,15 @@ function renderFlipTable() {
     const shared = dupGroups.reduce((a, g) => a + g.length, 0);
 
     const headCells2 = ["<th class=\"thnum\" title=\"number in the gallery (click a number to preview)\">#</th><th class=\"thnum\" title=\"how many solutions share this flip pattern\">dup</th><th class=\"thnum\">Flips</th>"];
-    for (let j = 0; j < 14; j++) {
+    for (let j = 0; j < N; j++) {
         headCells2.push(`<th class="pcol" title="piece ${LETTERS[j]}">${LETTERS[j]}</th>`);
     }
     const rows2 = [];
-    const bits = (sig) => Array.from({ length: 14 }, (_, j) => ((sig >> j) & 1) ? "1" : "0").join("");
+    const bits = (sig) => Array.from({ length: N }, (_, j) => ((sig >> j) & 1) ? "1" : "0").join("");
     const sortedGroups = [...groups.entries()].sort((a, b) => b[1].length - a[1].length || a[0] - b[0]);
     for (const [sig, members] of sortedGroups) {
         if (rows2.length > 0) {
-            rows2.push(`    <tr class="gsep"><td colspan="17" title="signature ${bits(sig)} \u2014 same flip pattern as gallery solutions ${members.join(", ")}"><span class="gseplabel">${members.length} solution${members.length > 1 ? "s" : ""} &middot; ${bits(sig)}</span></td></tr>`);
+            rows2.push(`    <tr class="gsep"><td colspan="${N + 3}" title="signature ${bits(sig)} \u2014 same flip pattern as gallery solutions ${members.join(", ")}"><span class="gseplabel">${members.length} solution${members.length > 1 ? "s" : ""} &middot; ${bits(sig)}</span></td></tr>`);
         }
         for (const orig of members) {
             const flags = flipBySol.get(unique[orig - 1]);
@@ -476,7 +480,7 @@ function renderFlipTable() {
         }
     }
     const footCells2 = [`<td class="num">${unique.length}</td>`, `<td class="num" title="${distinct} distinct flip patterns, ${dupGroups.length} of them shared">${distinct}</td>`, `<td class="num">${totalFlips}</td>`];
-    for (let j = 0; j < 14; j++) {
+    for (let j = 0; j < N; j++) {
         footCells2.push(`<td class="fcell tot" title="piece ${LETTERS[j]} flipped in ${flipTotals[j]} of ${unique.length} solutions">${flipTotals[j]}</td>`);
     }
 
@@ -484,7 +488,7 @@ function renderFlipTable() {
 <html>
 <head>
 <meta charset="utf-8">
-<title>Ostomachion &mdash; flip table (${unique.length} solutions)</title>
+<title>Ostomachion${CONFIG_SUFFIX} &mdash; flip table (${unique.length} solutions)</title>
 <style>
     body { background:#f5f2ea; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; margin:0; padding:16px; }
     h1 { font-weight:300; color:#444; margin:4px 0 4px 4px; }
@@ -523,7 +527,7 @@ function renderFlipTable() {
 </style>
 </head>
 <body>
-<h1>Ostomachion &mdash; which pieces are mirror-flipped</h1>
+<h1>Ostomachion${CONFIG_SUFFIX} &mdash; which pieces are mirror-flipped</h1>
 <p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions grouped by flip pattern, most common patterns first; a horizontal line separates each pattern. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows. <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
 <div class="tables">
 <div class="tcol">
@@ -624,7 +628,7 @@ ${rows2.join("\n")}
         });
         document.addEventListener("click", function(e) {
             var el = e.target;
-            if (el && el.className === "sollink") {
+            if (el && (el.className === "sollink" || el.className === "prev")) {
                 e.preventDefault();
                 el.parentNode.classList.toggle("preview");
             }

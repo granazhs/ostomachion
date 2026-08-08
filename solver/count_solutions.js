@@ -682,14 +682,15 @@ function main() {
     const rawKeys = new Set();
     const keyPairs = new Set();
     const unlabeledKeys = new Set();
+    const pairSwaps = congruentPairs().map(([a, b]) => [a, b]);
+    const swapMasks = 1 << pairSwaps.length;
     for (const sol of solutions) {
-        for (let m = 0; m < 4; m++) {
-            const sd = m & 1, sj = (m >> 1) & 1;
+        for (let m = 0; m < swapMasks; m++) {
             const nameAt = i => {
-                if (i === 3) return sd ? PIECE_NAMES[4] : PIECE_NAMES[3];
-                if (i === 4) return sd ? PIECE_NAMES[3] : PIECE_NAMES[4];
-                if (i === 9) return sj ? PIECE_NAMES[10] : PIECE_NAMES[9];
-                if (i === 10) return sj ? PIECE_NAMES[9] : PIECE_NAMES[10];
+                for (let p = 0; p < pairSwaps.length; p++) {
+                    if (i === pairSwaps[p][0]) return ((m >> p) & 1) ? PIECE_NAMES[pairSwaps[p][1]] : PIECE_NAMES[pairSwaps[p][0]];
+                    if (i === pairSwaps[p][1]) return ((m >> p) & 1) ? PIECE_NAMES[pairSwaps[p][0]] : PIECE_NAMES[pairSwaps[p][1]];
+                }
                 return PIECE_NAMES[i];
             };
             let rawKey = "";

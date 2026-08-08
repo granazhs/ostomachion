@@ -6204,7 +6204,7 @@
         });
         document.addEventListener("click", function(e) {
             var el = e.target;
-            if (el && el.className === "sollink") {
+            if (el && (el.className === "sollink" || el.className === "prev")) {
                 e.preventDefault();
                 el.parentNode.classList.toggle("preview");
             }

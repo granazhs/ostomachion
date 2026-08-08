@@ -161,7 +161,8 @@ const CHORD_COLOR = {
 };
 const chordColor = name => CHORD_COLOR[name] || "#6D4C41";
 
-const data = JSON.parse(fs.readFileSync(path.join(__dirname, "solutions.json"), "utf8"));
+const CONFIG = process.env.OSTOMACHION_CONFIG || "classic";
+const data = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG === "classic" ? "solutions.json" : `solutions_${CONFIG}.json`), "utf8"));
 
 const seenG = new Map();
 for (const sol of data.solutions) {
@@ -201,7 +202,8 @@ function shapeDesc(segs) {
     return desc.sort();
 }
 
-const outDir = path.join(__dirname, "gallery");
+const outDir = path.join(__dirname, CONFIG === "classic" ? "gallery" : `gallery_${CONFIG}`);
+const CONFIG_SUFFIX = CONFIG === "classic" ? "" : ` &mdash; ${CONFIG} game`;
 
 // diagram SVG for one case
 function caseDiagram(segs) {
@@ -353,13 +355,13 @@ ${blocks.join("\n")}
 buildPage({
     removed: REMOVED_CHORDS,
     file: "cases.html",
-    title: "Ostomachion &mdash; spanning-cut cases",
+    title: "Ostomachion" + CONFIG_SUFFIX + " &mdash; spanning-cut cases",
     sub: n => `The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Corner-region and 45&deg; midpoint diagonals are left out of the game; solutions are re-grouped by the cut-lines that remain, so none is dropped. When the same diagonal appears twice, the case is split by whether the two run parallel or converge at one point on the board edge. ${n} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="cases_all.html">All diagonals</a> &middot; <a href="flips.html">Flip table</a>`
 });
 
 buildPage({
     removed: new Set(),
     file: "cases_all.html",
-    title: "Ostomachion &mdash; spanning-cut cases, all diagonals",
+    title: "Ostomachion" + CONFIG_SUFFIX + " &mdash; spanning-cut cases, all diagonals",
     sub: n => `The ${rows.length} unlabeled tilings of the <a href="index.html">gallery</a> grouped by which maximal cut-lines cross the whole 12&times;12 board (full spanning cuts). Every full spanning cut counts, including corner-region and 45&deg; midpoint diagonals. When the same diagonal appears twice, the case is split by whether the two run parallel or converge at one point on the board edge. ${n} distinct cases, most common first. Each case shows its cut-lines as a diagram plus thumbnails of the gallery rows that realize it. <a href="cases.html">Restricted</a> &middot; <a href="flips.html">Flip table</a>`
 });
