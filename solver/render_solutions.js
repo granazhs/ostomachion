@@ -2,7 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { simplifyPoly, ccw, PIECE_V, PIECE_NAMES } = require("./pieces.js");
+const { simplifyPoly, ccw, PIECE_V, PIECE_NAMES, congruentPairs } = require("./pieces.js");
 
 const GRID = 12;
 const LETTERS = PIECE_NAMES.join("");
@@ -258,7 +258,7 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion &mdash; ${unique.length} unlabeled solutions</h1>
-<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces ${PIECE_NAMES[3]}/${PIECE_NAMES[4]} and ${PIECE_NAMES[9]}/${PIECE_NAMES[10]} treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); \u201cAll\u201d toggles between all and none. Piece orientations are shown while exactly one piece is selected. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
+<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces ${congruentPairs().map(([a, b]) => `${PIECE_NAMES[a]}/${PIECE_NAMES[b]}`).join(" and ")} treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); \u201cAll\u201d toggles between all and none. Piece orientations are shown while exactly one piece is selected. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
 <div id="pkeys">
     <button class="wide" data-pk="all">All</button>
     ${PIECE_NAMES.map(n => `<button data-pk="${n}">${n}</button>`).join("")}

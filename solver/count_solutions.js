@@ -2,13 +2,13 @@
 
 const fs = require("fs");
 const path = require("path");
-const { PIECE_V, PIECE_NAMES, ccw, simplifyPoly } = require("./pieces.js");
+const { PIECE_V, PIECE_NAMES, ccw, simplifyPoly, congruentPairs } = require("./pieces.js");
 
 const GRID = 12;
 const H = 1000000000n;
 const NB = 64;
 
-const PAIRS = [[3, 4], [9, 10]];
+const PAIRS = congruentPairs();
 
 function bgcd(a, b) {
     a = a < 0n ? -a : a;

@@ -85,6 +85,47 @@ function interiorAngles(poly) {
     return out;
 }
 
+function gcd(a, b) {
+    a = Math.abs(a); b = Math.abs(b);
+    while (b) { const t = a % b; a = b; b = t; }
+    return a;
+}
+
+function canonShapeKey(poly) {
+    const p = ccw(simplifyPoly(poly));
+    const n = p.length;
+    const lens = edges(p).map(edgeLen);
+    const ints = interiorAngles(p);
+    const feats = [];
+    for (let i = 0; i < n; i++) feats.push([+ints[i].toFixed(6), +lens[i].toFixed(6)]);
+    const cands = [];
+    for (const seq of [feats, feats.slice().reverse()]) {
+        for (let s = 0; s < n; s++) {
+            cands.push(JSON.stringify([...seq.slice(s), ...seq.slice(0, s)]));
+        }
+    }
+    cands.sort();
+    return cands[0];
+}
+
+function congruentPairs() {
+    const byKey = new Map();
+    PIECE_V.forEach((poly, i) => {
+        const k = canonShapeKey(poly);
+        if (!byKey.has(k)) byKey.set(k, []);
+        byKey.get(k).push(i);
+    });
+    const pairs = [];
+    for (const idx of byKey.values()) {
+        if (idx.length < 2) continue;
+        for (let i = 0; i < idx.length; i++) {
+            for (let j = i + 1; j < idx.length; j++) pairs.push([idx[i], idx[j]]);
+        }
+    }
+    pairs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    return pairs;
+}
+
 function simplifyPoly(poly) {
     const p = poly.map(v => v.slice());
     let changed = true;
@@ -118,6 +159,8 @@ module.exports = {
     edgeAngleDeg,
     interiorAngles,
     simplifyPoly,
+    canonShapeKey,
+    congruentPairs,
     norm360,
     angDist
 };

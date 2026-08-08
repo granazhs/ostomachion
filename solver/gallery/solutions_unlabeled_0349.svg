@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" data-board="1" data-m="18" data-cell="22" width="300" height="300" viewBox="0 0 300 300">
   <rect x="0" y="0" width="300" height="300" fill="#f5f2ea"/>
-  <polygon points="62.00,128.00 18.00,150.00 150.00,150.00" fill="#E53935" data-piece="I" data-color="#E53935" data-lx="2.50" data-ly="5.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
-  <polygon points="150.00,84.00 194.00,150.00 150.00,150.00" fill="#D81B60" data-piece="K" data-color="#D81B60" data-lx="6.50" data-ly="4.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
-  <polygon points="62.00,128.00 150.00,150.00 150.00,84.00" fill="#8E24AA" data-piece="L" data-color="#8E24AA" data-lx="4.50" data-ly="4.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="62.00,128.00 18.00,150.00 150.00,150.00" fill="#546E7A" data-piece="N" data-color="#546E7A" data-lx="2.50" data-ly="5.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="150.00,84.00 194.00,150.00 150.00,150.00" fill="#FB8C00" data-piece="L" data-color="#FB8C00" data-lx="6.50" data-ly="4.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="62.00,128.00 150.00,150.00 150.00,84.00" fill="#FDD835" data-piece="K" data-color="#FDD835" data-lx="4.50" data-ly="4.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
   <polygon points="18.00,282.00 18.00,150.00 62.00,194.00" fill="#5E35B1" data-piece="D" data-color="#5E35B1" data-lx="0.50" data-ly="8.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
   <circle cx="29.00" cy="183.00" r="2.00" fill="#222"/>
   <circle cx="29.00" cy="205.00" r="2.00" fill="#222"/>
@@ -16,10 +16,10 @@
   <circle cx="117.00" cy="73.00" r="2.00" fill="#222"/>
   <circle cx="117.00" cy="95.00" r="2.00" fill="#222"/>
   <polygon points="282.00,216.00 150.00,216.00 282.00,150.00" fill="#00897B" data-piece="G" data-color="#00897B" data-lx="9.50" data-ly="7.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
-  <polygon points="62.00,194.00 282.00,150.00 18.00,150.00" fill="#43A047" data-piece="M" data-color="#43A047" data-lx="4.50" data-ly="6.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
-  <polygon points="150.00,216.00 194.00,194.00 282.00,150.00 62.00,194.00 106.00,238.00" fill="#C0CA33" data-piece="J" data-color="#C0CA33" data-lx="5.50" data-ly="7.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
-  <polygon points="18.00,150.00 106.00,106.00 62.00,62.00 18.00,18.00" fill="#F4511E" data-piece="A" data-color="#F4511E" data-lx="1.50" data-ly="3.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
-  <polygon points="62.00,194.00 150.00,282.00 18.00,282.00" fill="#FDD835" data-piece="B" data-color="#FDD835" data-lx="2.50" data-ly="10.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="62.00,194.00 282.00,150.00 18.00,150.00" fill="#F4511E" data-piece="J" data-color="#F4511E" data-lx="4.50" data-ly="6.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="150.00,216.00 194.00,194.00 282.00,150.00 62.00,194.00 106.00,238.00" fill="#6D4C41" data-piece="M" data-color="#6D4C41" data-lx="5.50" data-ly="7.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="18.00,150.00 106.00,106.00 62.00,62.00 18.00,18.00" fill="#E53935" data-piece="A" data-color="#E53935" data-lx="1.50" data-ly="3.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="62.00,194.00 150.00,282.00 18.00,282.00" fill="#D81B60" data-piece="B" data-color="#D81B60" data-lx="2.50" data-ly="10.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
   <circle cx="29.00" cy="271.00" r="2.00" fill="#222"/>
   <circle cx="51.00" cy="227.00" r="2.00" fill="#222"/>
   <circle cx="51.00" cy="249.00" r="2.00" fill="#222"/>
@@ -30,7 +30,7 @@
   <circle cx="95.00" cy="249.00" r="2.00" fill="#222"/>
   <circle cx="95.00" cy="271.00" r="2.00" fill="#222"/>
   <circle cx="117.00" cy="271.00" r="2.00" fill="#222"/>
-  <polygon points="150.00,84.00 194.00,62.00 150.00,18.00 18.00,18.00" fill="#FB8C00" data-piece="C" data-color="#FB8C00" data-lx="4.50" data-ly="1.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="150.00,84.00 194.00,62.00 150.00,18.00 18.00,18.00" fill="#8E24AA" data-piece="C" data-color="#8E24AA" data-lx="4.50" data-ly="1.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
   <circle cx="51.00" cy="29.00" r="2.00" fill="#222"/>
   <circle cx="73.00" cy="29.00" r="2.00" fill="#222"/>
   <circle cx="95.00" cy="29.00" r="2.00" fill="#222"/>
@@ -42,8 +42,8 @@
   <circle cx="139.00" cy="73.00" r="2.00" fill="#222"/>
   <circle cx="161.00" cy="51.00" r="2.00" fill="#222"/>
   <circle cx="161.00" cy="73.00" r="2.00" fill="#222"/>
-  <polygon points="150.00,282.00 282.00,282.00 282.00,216.00 150.00,216.00 106.00,238.00" fill="#6D4C41" data-piece="H" data-color="#6D4C41" data-lx="8.50" data-ly="10.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
-  <polygon points="282.00,18.00 282.00,150.00 194.00,150.00 150.00,84.00" fill="#546E7A" data-piece="N" data-color="#546E7A" data-lx="9.50" data-ly="3.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="150.00,282.00 282.00,282.00 282.00,216.00 150.00,216.00 106.00,238.00" fill="#43A047" data-piece="H" data-color="#43A047" data-lx="8.50" data-ly="10.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="282.00,18.00 282.00,150.00 194.00,150.00 150.00,84.00" fill="#C0CA33" data-piece="I" data-color="#C0CA33" data-lx="9.50" data-ly="3.50" stroke="#222" stroke-width="1" stroke-linejoin="round"/>
   <line x1="40.00" y1="18.00" x2="40.00" y2="282.00" stroke="#c9c9c9" stroke-width="1"/>
   <line x1="18.00" y1="40.00" x2="282.00" y2="40.00" stroke="#c9c9c9" stroke-width="1"/>
   <line x1="62.00" y1="18.00" x2="62.00" y2="282.00" stroke="#c9c9c9" stroke-width="1"/>
