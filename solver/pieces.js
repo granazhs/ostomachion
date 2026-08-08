@@ -1,26 +1,8 @@
 "use strict";
 
-const PIECE_V = [
-    [[1, 2], [0, 0], [0, 6]],
-    [[3, 6], [0, 8], [0, 6]],
-    [[1, 2], [0, 6], [3, 6]],
-    [[6, 0], [0, 0], [2, 2]],
-    [[10, 8], [12, 12], [12, 6]],
-    [[4, 4], [3, 6], [0, 0]],
-    [[9, 0], [9, 6], [6, 0]],
-    [[8, 10], [6, 0], [6, 12]],
-    [[9, 6], [8, 4], [6, 0], [8, 10], [10, 8]],
-    [[12, 12], [10, 8], [8, 10], [6, 12]],
-    [[2, 2], [6, 6], [6, 0]],
-    [[3, 6], [4, 4], [6, 6], [6, 12]],
-    [[12, 6], [12, 0], [9, 0], [9, 6], [10, 8]],
-    [[6, 12], [0, 12], [0, 8], [3, 6]]
-];
-
-const PIECE_NAMES = [
-    "A", "B", "C", "D", "E", "F", "G",
-    "H", "I", "J", "K", "L", "M", "N"
-];
+const CONFIGS = require("../site/assets/pieces.js");
+const ACTIVE_CONFIG = "classic";
+const { names: PIECE_NAMES, pieces: PIECE_V } = CONFIGS[ACTIVE_CONFIG];
 
 function signedArea(poly) {
     let A = 0;
@@ -123,6 +105,8 @@ function simplifyPoly(poly) {
 }
 
 module.exports = {
+    CONFIGS,
+    ACTIVE_CONFIG,
     PIECE_V,
     PIECE_NAMES,
     signedArea,

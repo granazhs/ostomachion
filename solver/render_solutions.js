@@ -2,10 +2,11 @@
 
 const fs = require("fs");
 const path = require("path");
-const { simplifyPoly, ccw, PIECE_V } = require("./pieces.js");
+const { simplifyPoly, ccw, PIECE_V, PIECE_NAMES } = require("./pieces.js");
 
 const GRID = 12;
-const LETTERS = "ABCDEFGHIJKLMN";
+const LETTERS = PIECE_NAMES.join("");
+const NAME_IDX = new Map(PIECE_NAMES.map((n, i) => [n, i]));
 const COLORS = ["#E53935", "#D81B60", "#8E24AA", "#5E35B1", "#3949AB",
                 "#1E88E5", "#00897B", "#43A047", "#C0CA33", "#F4511E",
                 "#FDD835", "#FB8C00", "#6D4C41", "#546E7A"];
@@ -75,7 +76,7 @@ function orientPoly(verts, rot, flip) {
 }
 
 function pieceIsFlipped(piece, placed) {
-    const canon = PIECE_V[piece.charCodeAt(0) - 65];
+    const canon = PIECE_V[NAME_IDX.get(piece)];
     for (let flip = 0; flip <= 1; flip++) {
         for (let rot = 0; rot < 4; rot++) {
             const p = orientPoly(canon, rot, flip);
@@ -170,7 +171,7 @@ function renderSVG(sol, flags, labeled) {
     g.push(`<svg xmlns="http://www.w3.org/2000/svg" data-board="1" data-m="${M}" data-cell="${CELL}" width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">`);
     g.push(`  <rect x="0" y="0" width="${W}" height="${W}" fill="${BG}"/>`);
     for (const { piece, vertices } of sol) {
-        const idx = piece.charCodeAt(0) - 65;
+        const idx = NAME_IDX.get(piece);
         const [lx, ly] = labelPoint(vertices);
         g.push(`  <polygon points="${polyPoints(vertices)}" fill="${COLORS[idx]}" data-piece="${piece}" data-color="${COLORS[idx]}" data-lx="${lx.toFixed(2)}" data-ly="${ly.toFixed(2)}" stroke="${PIECE_STROKE}" stroke-width="1" stroke-linejoin="round"/>`);
         if (flags[idx]) {
@@ -210,7 +211,7 @@ const flipTotals = new Array(14).fill(0);
 for (const sol of unique) {
     const flags = new Array(14).fill(false);
     for (const { piece, vertices } of sol) {
-        const idx = piece.charCodeAt(0) - 65;
+        const idx = NAME_IDX.get(piece);
         flags[idx] = pieceIsFlipped(piece, vertices);
     }
     flipBySol.set(sol, flags);
@@ -257,14 +258,10 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion &mdash; ${unique.length} unlabeled solutions</h1>
-<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces D/E and J/K treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); \u201cAll\u201d toggles between all and none. Piece orientations are shown while exactly one piece is selected. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
+<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces ${PIECE_NAMES[3]}/${PIECE_NAMES[4]} and ${PIECE_NAMES[9]}/${PIECE_NAMES[10]} treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); \u201cAll\u201d toggles between all and none. Piece orientations are shown while exactly one piece is selected. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
 <div id="pkeys">
     <button class="wide" data-pk="all">All</button>
-    <button data-pk="A">A</button><button data-pk="B">B</button><button data-pk="C">C</button>
-    <button data-pk="D">D</button><button data-pk="E">E</button><button data-pk="F">F</button>
-    <button data-pk="G">G</button><button data-pk="H">H</button><button data-pk="I">I</button>
-    <button data-pk="J">J</button><button data-pk="K">K</button><button data-pk="L">L</button>
-    <button data-pk="M">M</button><button data-pk="N">N</button>
+    ${PIECE_NAMES.map(n => `<button data-pk="${n}">${n}</button>`).join("")}
 </div>
 <div id="orientations"></div>
 <div class="grid">
@@ -527,7 +524,7 @@ function renderFlipTable() {
 </head>
 <body>
 <h1>Ostomachion &mdash; which pieces are mirror-flipped</h1>
-<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece A&ndash;N. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions grouped by flip pattern, most common patterns first; a horizontal line separates each pattern. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows. <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
+<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions grouped by flip pattern, most common patterns first; a horizontal line separates each pattern. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows. <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
 <div class="tables">
 <div class="tcol">
 <h2>Gallery order</h2>
