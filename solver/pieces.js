@@ -1,8 +1,10 @@
 "use strict";
 
 const CONFIGS = require("../site/assets/pieces.js");
+const CANDIDATES = require("./candidate_models.js");
+const CONFIG_MAP = Object.assign({}, CONFIGS, CANDIDATES);
 const ACTIVE_CONFIG = process.env.OSTOMACHION_CONFIG || "classic";
-const { names: PIECE_NAMES, pieces: PIECE_V } = CONFIGS[ACTIVE_CONFIG];
+const { names: PIECE_NAMES, pieces: PIECE_V } = CONFIG_MAP[ACTIVE_CONFIG];
 
 function signedArea(poly) {
     let A = 0;
@@ -155,6 +157,8 @@ function simplifyPoly(poly) {
 
 module.exports = {
     CONFIGS,
+    CONFIG_MAP,
+    CANDIDATES,
     ACTIVE_CONFIG,
     PIECE_V,
     PIECE_NAMES,

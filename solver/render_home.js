@@ -127,6 +127,10 @@ function readCounts() {
 }
 
 const counts = readCounts();
+const CANDIDATE_COUNT = (function () {
+    try { return Object.keys(require("./candidate_models.js")).length; }
+    catch (e) { return 2392; }
+})();
 
 const html = `<!DOCTYPE html>
 <html>
@@ -250,6 +254,7 @@ ${pieceRows()}
 <div class="links">
     <p><a href="gallery/index.html">Classic gallery (${counts.classic.unlabeled} solutions)</a> &middot; <a href="gallery/flips.html">classic flip table</a> &middot; <a href="gallery/cases.html">classic spanning-cut cases</a></p>
     <p><a href="gallery_simple/index.html">Simple gallery (${counts.simple.unlabeled} solutions)</a> &middot; <a href="gallery_simple/flips.html">simple flip table</a> &middot; <a href="gallery_simple/cases.html">simple spanning-cut cases</a></p>
+    <p><a href="candidate_dissections.html">Candidate dissections (${CANDIDATE_COUNT} models)</a> &mdash; every way to cut the composite pieces I, J, K along simple-game vocabulary cuts</p>
 </div>
 
 <footer>
