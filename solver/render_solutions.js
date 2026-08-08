@@ -262,7 +262,7 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
 <h1>Ostomachion${CONFIG_SUFFIX} &mdash; ${unique.length} unlabeled solutions</h1>
-<p class="sub">Each tiling drawn on the 12&times;12 grid; congruent pieces ${congruentPairs().map(([a, b]) => `${PIECE_NAMES[a]}/${PIECE_NAMES[b]}`).join(" and ")} treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); \u201cAll\u201d toggles between all and none. Piece orientations are shown while exactly one piece is selected. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
+<p class="sub"><a href="../index.html">Home</a> &middot; Each tiling drawn on the 12&times;12 grid; congruent pieces ${congruentPairs().map(([a, b]) => `${PIECE_NAMES[a]}/${PIECE_NAMES[b]}`).join(" and ")} treated as interchangeable; mirrors and rotations merged. Dots mark mirror-flipped pieces. Click letters to toggle pieces on or off across every tiling (several can be on at once); \u201cAll\u201d toggles between all and none. Piece orientations are shown while exactly one piece is selected. <a href="flips.html">Flip table</a> &middot; <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
 <div id="pkeys">
     <button class="wide" data-pk="all">All</button>
     ${PIECE_NAMES.map(n => `<button data-pk="${n}">${n}</button>`).join("")}
@@ -528,7 +528,7 @@ function renderFlipTable() {
 </head>
 <body>
 <h1>Ostomachion${CONFIG_SUFFIX} &mdash; which pieces are mirror-flipped</h1>
-<p class="sub">One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions grouped by flip pattern, most common patterns first; a horizontal line separates each pattern. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows. <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
+<p class="sub"><a href="../index.html">Home</a> &middot; One row per solution (the ${unique.length} unlabeled distinct tilings shown in the <a href="index.html">gallery</a>), one column per piece. A cell filled with the piece&rsquo;s color means that piece is mirror-flipped in that solution; an empty cell means it is not. In the left table, click a piece letter to show only rows where it is flipped, click &ldquo;Flips&rdquo; to sort by flip count, and click a solution number to preview its tiling. The right table lists the same solutions grouped by flip pattern, most common patterns first; a horizontal line separates each pattern. Only ${distinct} of the ${unique.length} solutions have a distinct flip pattern: ${dupGroups.length} patterns are shared by ${shared} solutions, each marked with a &times;N badge and tinted rows. <a href="cases.html">Spanning-cut cases</a> &middot; <a href="cases_all.html">all diagonals</a></p>
 <div class="tables">
 <div class="tcol">
 <h2>Gallery order</h2>

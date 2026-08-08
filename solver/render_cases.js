@@ -342,7 +342,7 @@ ${thumbs}
 </head>
 <body>
 <h1>${title}</h1>
-<p class="sub">${sub(ordered.length)}</p>
+<p class="sub"><a href="../index.html">Home</a> &middot; ${sub(ordered.length)}</p>
 ${blocks.join("\n")}
 <script src="labels.js"></script>
 </body>
